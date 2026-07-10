@@ -1,0 +1,117 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  permissions Json     @default("{}")
+  users       User[]
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  password   String
+  phone      String?
+  status     String   @default("ACTIVE")
+  role_id    Int
+  role       Role     @relation(fields: [role_id], references: [id])
+  student    Student?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Department {
+  id         Int       @id @default(autoincrement())
+  code       String?   @unique
+  name       String
+  students   Student[]
+  courses    Course[]
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+}
+
+model Student {
+  id            Int          @id @default(autoincrement())
+  user_id       Int          @unique
+  user          User         @relation(fields: [user_id], references: [id])
+  department_id Int
+  department    Department   @relation(fields: [department_id], references: [id])
+  admission_no  String?      @unique
+  date_of_birth DateTime?
+  gender        String?
+  address       String?
+  status        String       @default("ACTIVE")
+  results       ExamResult[]
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+}
+
+model Course {
+  id             Int            @id @default(autoincrement())
+  code           String?        @unique
+  title          String
+  department_id  Int?
+  department     Department?    @relation(fields: [department_id], references: [id])
+  exam_schedules ExamSchedule[]
+  exam_results   ExamResult[]
+  course_exams   CourseExam[]
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+}
+
+model ExamSchedule {
+  id           Int          @id @default(autoincrement())
+  course_id    Int
+  course       Course       @relation(fields: [course_id], references: [id])
+  title        String
+  exam_type    String?
+  exam_date    DateTime
+  start_time   String?
+  end_time     String?
+  room         String?
+  status       String       @default("SCHEDULED")
+  exam_results ExamResult[]
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+}
+
+model ExamResult {
+  id               Int           @id @default(autoincrement())
+  exam_schedule_id Int?
+  exam_schedule    ExamSchedule? @relation(fields: [exam_schedule_id], references: [id])
+  student_id       Int
+  student          Student       @relation(fields: [student_id], references: [id])
+  course_id        Int
+  course           Course        @relation(fields: [course_id], references: [id])
+  midterm_score    Decimal       @default(0)
+  final_score      Decimal       @default(0)
+  activity_score   Decimal       @default(0)
+  total_score      Decimal       @default(0)
+  remarks          String?
+  status           String        @default("PUBLISHED")
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+}
+
+model CourseExam {
+  id               Int      @id @default(autoincrement())
+  course_id        Int
+  course           Course   @relation(fields: [course_id], references: [id])
+  title            String
+  instructions     String?
+  duration_minutes Int?
+  questions        Json
+  status           String   @default("DRAFT")
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+}
