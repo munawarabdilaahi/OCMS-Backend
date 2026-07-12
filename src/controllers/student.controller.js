@@ -104,15 +104,75 @@ export async function createStudent(req, res, next) {
 }
 export async function getStats(req, res, next) {
     try {
-        const [totalStudents, activeStudents, totalUsers, totalDepartments] = await Promise.all([
+        const [
+            totalStudents,
+            activeStudents,
+            inactiveStudents,
+            totalUsers,
+            totalDepartments,
+            departmentBreakdown,
+            genderBreakdown,
+            recentStudents,
+            totalExamSchedules,
+            totalExamResults,
+        ] = await Promise.all([
             studentDelegate().count(),
             studentDelegate().count({ where: { status: 'ACTIVE' } }),
+            studentDelegate().count({ where: { status: { not: 'ACTIVE' } } }),
             userDelegate().count(),
             prisma.department.count(),
+            prisma.department.findMany({
+                select: {
+                    name: true,
+                    _count: { select: { students: true } },
+                },
+            }),
+            studentDelegate().groupBy({
+                by: ['gender'],
+                _count: { id: true },
+                where: { gender: { not: null } },
+            }),
+            studentDelegate().findMany({
+                take: 5,
+                orderBy: { created_at: 'desc' },
+                select: {
+                    id: true,
+                    status: true,
+                    created_at: true,
+                    user: { select: { name: true, email: true } },
+                    department: { select: { name: true } },
+                },
+            }),
+            prisma.examSchedule.count(),
+            prisma.examResult.count(),
         ]);
         return res.status(200).json({
             success: true,
-            data: { totalStudents, activeStudents, totalUsers, totalDepartments },
+            data: {
+                totalStudents,
+                activeStudents,
+                inactiveStudents,
+                totalUsers,
+                totalDepartments,
+                totalExamSchedules,
+                totalExamResults,
+                departmentBreakdown: departmentBreakdown.map((d) => ({
+                    name: d.name,
+                    count: d._count.students,
+                })),
+                genderBreakdown: genderBreakdown.map((g) => ({
+                    name: g.gender || 'Unspecified',
+                    value: g._count.id,
+                })),
+                recentStudents: recentStudents.map((s) => ({
+                    id: s.id,
+                    name: s.user?.name || '',
+                    email: s.user?.email || '',
+                    department: s.department?.name || '',
+                    status: s.status,
+                    created_at: s.created_at,
+                })),
+            },
         });
     }
     catch (error) {
