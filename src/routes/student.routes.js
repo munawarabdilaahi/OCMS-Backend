@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { createStudent, deleteStudent, getStudentById, getStudents, updateStudent, updateStudentStatus, } from '../controllers/student.controller.js';
+import { createStudent, deleteStudent, getStudentById, getStudents, getStats, updateStudent, updateStudentStatus, } from '../controllers/student.controller.js';
 const router = Router();
+router.get('/stats', getStats);
 router.post('/', createStudent);
 router.get('/', getStudents);
 router.get('/:id', getStudentById);

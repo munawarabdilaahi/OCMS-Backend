@@ -5,38 +5,51 @@ const roleDelegate = () => prisma.role;
 const studentDelegate = () => prisma.student;
 const studentInclude = {
     user: {
-        include: {
-            role: true,
+        select: {
+            name: true,
+            email: true,
+            phone: true,
         },
     },
-    department: true,
+    department: {
+        select: {
+            name: true,
+        },
+    },
 };
 function serializeStudent(student) {
     if (!student)
         return null;
-    const user = student.user
-        ? {
-            ...student.user,
-            password: undefined,
-            password_hash: undefined,
-            passwordHash: undefined,
-            role: student.user.role
-                ? {
-                    ...student.user.role,
-                    permissions: student.user.role.permissions || {},
-                }
-                : null,
-        }
-        : null;
     return {
-        ...student,
-        user,
+        id: student.id,
+        name: student.user?.name || '',
+        email: student.user?.email || '',
+        phone: student.user?.phone || '',
+        gender: student.gender || '',
+        department: student.department?.name || '',
+        department_id: student.department_id,
+        status: student.status || '',
+        admission_no: student.admission_no || '',
+        date_of_birth: student.date_of_birth || null,
+        address: student.address || '',
     };
 }
 async function getStudentRoleId() {
     const role = await roleDelegate().findFirst({ where: { name: 'Student' } });
-    return role?.id;
+    if (role) return role.id;
+    const created = await roleDelegate().create({ data: { name: 'Student', permissions: '{}' } });
+    return created.id;
 }
+const studentDetailInclude = {
+    user: {
+        select: {
+            name: true,
+            email: true,
+            phone: true,
+        },
+    },
+    department: true,
+};
 export async function createStudent(req, res, next) {
     try {
         const { name, email, password, phone, department_id, departmentId, admission_no, admissionNo, date_of_birth, dateOfBirth, gender, address, status = 'ACTIVE', } = req.body;
@@ -54,12 +67,6 @@ export async function createStudent(req, res, next) {
             });
         }
         const roleId = await getStudentRoleId();
-        if (!roleId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Student role was not found.',
-            });
-        }
         const hashedPassword = await bcrypt.hash(password, 12);
         const student = await prisma.$transaction(async (tx) => {
             const user = await tx.user.create({
@@ -89,6 +96,23 @@ export async function createStudent(req, res, next) {
             success: true,
             message: 'Student created successfully.',
             data: serializeStudent(student),
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+export async function getStats(req, res, next) {
+    try {
+        const [totalStudents, activeStudents, totalUsers, totalDepartments] = await Promise.all([
+            studentDelegate().count(),
+            studentDelegate().count({ where: { status: 'ACTIVE' } }),
+            userDelegate().count(),
+            prisma.department.count(),
+        ]);
+        return res.status(200).json({
+            success: true,
+            data: { totalStudents, activeStudents, totalUsers, totalDepartments },
         });
     }
     catch (error) {
@@ -145,7 +169,7 @@ export async function getStudentById(req, res, next) {
     try {
         const student = await studentDelegate().findUnique({
             where: { id: Number(req.params.id) },
-            include: studentInclude,
+            include: studentDetailInclude,
         });
         if (!student) {
             return res.status(404).json({
@@ -156,7 +180,20 @@ export async function getStudentById(req, res, next) {
         return res.status(200).json({
             success: true,
             message: 'Student retrieved successfully.',
-            data: serializeStudent(student),
+            data: {
+                id: student.id,
+                name: student.user?.name || '',
+                email: student.user?.email || '',
+                phone: student.user?.phone || '',
+                gender: student.gender || '',
+                department: student.department?.name || '',
+                department_id: student.department_id,
+                status: student.status || '',
+                admission_no: student.admission_no || '',
+                date_of_birth: student.date_of_birth || null,
+                address: student.address || '',
+                created_at: student.created_at,
+            },
         });
     }
     catch (error) {

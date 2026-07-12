@@ -4,13 +4,12 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Waxaan halkan ku dhalinaynaa hash rasmiah oo kombuyuutarkaaga ka dhashay
   const hashedPassword = await bcrypt.hash('campus123', 10);
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@ocms.edu' },
     update: {
-      password: hashedPassword // Mar walba dib u cusboonaysii haddii uu jiro
+      password: hashedPassword
     },
     create: {
       email: 'admin@ocms.edu',
@@ -25,7 +24,36 @@ async function main() {
     },
   });
 
-  console.log('🌱 Database-ka waxaa lagu shubay Super Admin rasmiah:', admin.email);
+  console.log('Super Admin:', admin.email);
+
+  await prisma.role.upsert({
+    where: { name: 'Student' },
+    update: {},
+    create: { name: 'Student' },
+  });
+
+  console.log('Student role ready.');
+
+  const departmentNames = [
+    'Computer Science',
+    'Business',
+    'Engineering',
+    'Health Sciences',
+    'Education',
+  ];
+
+  for (const name of departmentNames) {
+    await prisma.department.upsert({
+      where: { code: name.toLowerCase().replace(/\s+/g, '-') },
+      update: {},
+      create: {
+        code: name.toLowerCase().replace(/\s+/g, '-'),
+        name,
+      },
+    });
+  }
+
+  console.log(`Seeded ${departmentNames.length} departments.`);
 }
 
 main()
