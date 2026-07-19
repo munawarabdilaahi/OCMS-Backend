@@ -2,24 +2,35 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
 import studentRoutes from './routes/student.routes.js';
+import teacherRoutes from './routes/teacher.routes.js';
+import courseRoutes from './routes/course.routes.js';
 import examRoutes from './routes/exam.routes.js';
+import departmentRoutes from './routes/department.routes.js';
+import attendanceRoutes from './routes/attendance.routes.js';
+import userRoutes from './routes/user.routes.js';
+import roleRoutes from './routes/role.routes.js';
+import feeRoutes from './routes/fee.routes.js';
+import invoiceRoutes from './routes/invoice.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 import { errorHandler, notFound } from './middlewares/error.middleware.js';
 
 export function createApp() {
     const app = express();
 
-    // CORS Qaabaynta saxda ah ee IP-gaaga React-ka
+    const allowedOrigins = process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+        : ['http://localhost:3000'];
+
     app.use(cors({
-        origin: ['http://192.168.100.88:3000', 'http://localhost:3000'],
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        origin: allowedOrigins,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
-        credentials: true
+        credentials: true,
     }));
 
-    app.use(express.json({ limit: '10mb' }));
+    app.use(express.json({ limit: '1mb' }));
     app.use(express.urlencoded({ extended: true }));
 
-    // Health Check Endpoint
     app.get('/api/health', (req, res) => {
         res.status(200).json({
             success: true,
@@ -31,12 +42,19 @@ export function createApp() {
         });
     });
 
-    // API Routes
     app.use('/api/auth', authRoutes);
     app.use('/api/students', studentRoutes);
+    app.use('/api/teachers', teacherRoutes);
+    app.use('/api/courses', courseRoutes);
     app.use('/api/exams', examRoutes);
+    app.use('/api/departments', departmentRoutes);
+    app.use('/api/attendance', attendanceRoutes);
+    app.use('/api/users', userRoutes);
+    app.use('/api/roles', roleRoutes);
+    app.use('/api/fees', feeRoutes);
+    app.use('/api/invoices', invoiceRoutes);
+    app.use('/api/payments', paymentRoutes);
 
-    // Error Handlers (Waa inay ugu dambeeyaan mar walba)
     app.use(notFound);
     app.use(errorHandler);
 

@@ -17,27 +17,30 @@ model Role {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   name       String
-  email      String   @unique
+  email      String    @unique
   password   String
   phone      String?
-  status     String   @default("ACTIVE")
+  status     String    @default("ACTIVE")
   role_id    Int
-  role       Role     @relation(fields: [role_id], references: [id])
+  role       Role      @relation(fields: [role_id], references: [id])
   student    Student?
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  teacher    Teacher?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
 }
 
 model Department {
-  id         Int       @id @default(autoincrement())
-  code       String?   @unique
-  name       String
-  students   Student[]
-  courses    Course[]
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
+  id           Int            @id @default(autoincrement())
+  code         String?        @unique
+  name         String
+  students     Student[]
+  teachers     Teacher[]
+  courses      Course[]
+  fee_structures FeeStructure[]
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
 }
 
 model Student {
@@ -52,16 +55,43 @@ model Student {
   address       String?
   status        String       @default("ACTIVE")
   results       ExamResult[]
+  attendances   Attendance[]
+  invoices      Invoice[]
   created_at    DateTime     @default(now())
   updated_at    DateTime     @updatedAt
+}
+
+model Teacher {
+  id              Int       @id @default(autoincrement())
+  user_id         Int       @unique
+  user            User      @relation(fields: [user_id], references: [id])
+  department_id   Int?
+  department      Department? @relation(fields: [department_id], references: [id])
+  employee_no     String?   @unique
+  position        String?
+  qualification   String?
+  employment_date DateTime?
+  gender          String?
+  address         String?
+  status          String    @default("ACTIVE")
+  courses         Course[]
+  attendances     Attendance[]
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
 }
 
 model Course {
   id             Int            @id @default(autoincrement())
   code           String?        @unique
   title          String
+  credit_hours   Int?
+  semester       String?
+  status         String         @default("ACTIVE")
   department_id  Int?
   department     Department?    @relation(fields: [department_id], references: [id])
+  teacher_id     Int?
+  teacher        Teacher?       @relation(fields: [teacher_id], references: [id])
+  attendances    Attendance[]
   exam_schedules ExamSchedule[]
   exam_results   ExamResult[]
   course_exams   CourseExam[]
@@ -114,4 +144,82 @@ model CourseExam {
   status           String   @default("DRAFT")
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
+}
+
+model Attendance {
+  id           Int      @id @default(autoincrement())
+  student_id   Int
+  student      Student  @relation(fields: [student_id], references: [id])
+  course_id    Int
+  course       Course   @relation(fields: [course_id], references: [id])
+  teacher_id   Int?
+  teacher      Teacher? @relation(fields: [teacher_id], references: [id])
+  date         DateTime
+  status       String
+  remarks      String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@unique([student_id, course_id, date])
+}
+
+model FeeStructure {
+  id             Int       @id @default(autoincrement())
+  name           String
+  description    String?
+  amount         Decimal
+  department_id  Int?
+  department     Department? @relation(fields: [department_id], references: [id])
+  academic_year  String
+  semester       String?
+  status         String    @default("ACTIVE")
+  invoices       Invoice[]
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+}
+
+model Invoice {
+  id               Int       @id @default(autoincrement())
+  invoice_number   String    @unique
+  student_id       Int
+  student          Student   @relation(fields: [student_id], references: [id])
+  fee_structure_id Int?
+  fee_structure    FeeStructure? @relation(fields: [fee_structure_id], references: [id])
+  amount           Decimal
+  paid_amount      Decimal   @default(0)
+  balance          Decimal
+  status           String    @default("Pending")
+  due_date         DateTime
+  academic_year    String?
+  semester         String?
+  notes            String?
+  payments         Payment[]
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+}
+
+model Payment {
+  id               Int       @id @default(autoincrement())
+  invoice_id       Int
+  invoice          Invoice   @relation(fields: [invoice_id], references: [id])
+  amount           Decimal
+  payment_method   String
+  reference_number String?
+  status           String    @default("Completed")
+  notes            String?
+  recorded_by      Int?
+  transactions     Transaction[]
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+}
+
+model Transaction {
+  id         Int      @id @default(autoincrement())
+  payment_id Int
+  payment    Payment  @relation(fields: [payment_id], references: [id])
+  type       String
+  amount     Decimal
+  description String?
+  reference  String?
+  created_at DateTime @default(now())
 }

@@ -1,10 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const hashedPassword = await bcrypt.hash('campus123', 10);
+  const hashedPassword = await bcrypt.hash('Campus123', 10);
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@ocms.edu' },
@@ -17,8 +17,8 @@ async function main() {
       name: 'Niko King',
       role: {
         connectOrCreate: {
-          where: { name: 'ADMIN' },
-          create: { name: 'ADMIN' }
+          where: { name: 'Admin' },
+          create: { name: 'Admin' }
         }
       }
     },
@@ -32,7 +32,31 @@ async function main() {
     create: { name: 'Student' },
   });
 
-  console.log('Student role ready.');
+  await prisma.role.upsert({
+    where: { name: 'Admin' },
+    update: {},
+    create: { name: 'Admin' },
+  });
+
+  await prisma.role.upsert({
+    where: { name: 'SuperAdmin' },
+    update: {},
+    create: { name: 'SuperAdmin' },
+  });
+
+  await prisma.role.upsert({
+    where: { name: 'Teacher' },
+    update: {},
+    create: { name: 'Teacher' },
+  });
+
+  await prisma.role.upsert({
+    where: { name: 'Accountant' },
+    update: {},
+    create: { name: 'Accountant' },
+  });
+
+  console.log('Roles seeded: Student, Admin, SuperAdmin, Teacher, Accountant.');
 
   const departmentNames = [
     'Computer Science',

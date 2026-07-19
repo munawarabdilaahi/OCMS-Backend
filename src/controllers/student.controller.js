@@ -275,27 +275,33 @@ export async function updateStudent(req, res, next) {
         }
         const { name, email, phone, department_id, departmentId, admission_no, admissionNo, date_of_birth, dateOfBirth, gender, address, status, } = req.body;
         const student = await prisma.$transaction(async (tx) => {
-            if (name || email || phone || status) {
-                await tx.user.update({
-                    where: { id: existingStudent.user_id },
-                    data: {
-                        ...(name ? { name } : {}),
-                        ...(email ? { email } : {}),
-                        ...(phone ? { phone } : {}),
-                        ...(status ? { status } : {}),
-                    },
-                });
+            const userUpdate = {};
+            if (name !== undefined) userUpdate.name = name;
+            if (email !== undefined) userUpdate.email = email;
+            if (phone !== undefined) userUpdate.phone = phone;
+            if (status !== undefined) userUpdate.status = status;
+
+            if (Object.keys(userUpdate).length > 0) {
+                await tx.user.update({ where: { id: existingStudent.user_id }, data: userUpdate });
             }
+
+            const studentUpdate = {};
+            if (department_id !== undefined || departmentId !== undefined) {
+                studentUpdate.department_id = Number(department_id || departmentId);
+            }
+            if (admission_no !== undefined || admissionNo !== undefined) {
+                studentUpdate.admission_no = admission_no || admissionNo;
+            }
+            if (date_of_birth !== undefined || dateOfBirth !== undefined) {
+                studentUpdate.date_of_birth = (date_of_birth || dateOfBirth) ? new Date(date_of_birth || dateOfBirth) : null;
+            }
+            if (gender !== undefined) studentUpdate.gender = gender;
+            if (address !== undefined) studentUpdate.address = address;
+            if (status !== undefined) studentUpdate.status = status;
+
             return tx.student.update({
                 where: { id: studentId },
-                data: {
-                    ...(department_id || departmentId ? { department_id: Number(department_id || departmentId) } : {}),
-                    ...(admission_no || admissionNo ? { admission_no: admission_no || admissionNo } : {}),
-                    ...(date_of_birth || dateOfBirth ? { date_of_birth: new Date(date_of_birth || dateOfBirth) } : {}),
-                    ...(gender ? { gender } : {}),
-                    ...(address ? { address } : {}),
-                    ...(status ? { status } : {}),
-                },
+                data: studentUpdate,
                 include: studentInclude,
             });
         });
