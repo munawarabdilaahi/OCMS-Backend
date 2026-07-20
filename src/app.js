@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import authRoutes from './routes/auth.routes.js';
 import studentRoutes from './routes/student.routes.js';
 import teacherRoutes from './routes/teacher.routes.js';
@@ -13,12 +14,46 @@ import feeRoutes from './routes/fee.routes.js';
 import invoiceRoutes from './routes/invoice.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import { errorHandler, notFound } from './middlewares/error.middleware.js';
+import { globalLimiter } from './middlewares/rateLimit.middleware.js';
+
+const isProduction = process.env.NODE_ENV === 'production';
 
 export function createApp() {
     const app = express();
 
+    if (isProduction) {
+        app.set('trust proxy', 1);
+        app.use((req, res, next) => {
+            if (req.headers['x-forwarded-proto'] !== 'https' && !req.hostname.includes('localhost')) {
+                return res.redirect(301, `https://${req.headers.host}${req.url}`);
+            }
+            next();
+        });
+    }
+
+    app.use(helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", 'data:', 'https:'],
+                fontSrc: ["'self'"],
+                connectSrc: ["'self'"],
+                frameSrc: ["'none'"],
+                objectSrc: ["'none'"],
+                baseUri: ["'self'"],
+                formAction: ["'self'"],
+                upgradeInsecureRequests: isProduction ? [] : null,
+            },
+        },
+        crossOriginEmbedderPolicy: false,
+        crossOriginResourcePolicy: { policy: 'same-site' },
+        referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    }));
+
     const allowedOrigins = process.env.CORS_ORIGIN
-        ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+        ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
         : ['http://localhost:3000'];
 
     app.use(cors({
@@ -26,8 +61,10 @@ export function createApp() {
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true,
+        maxAge: 86400,
     }));
 
+    app.use(globalLimiter);
     app.use(express.json({ limit: '1mb' }));
     app.use(express.urlencoded({ extended: true }));
 

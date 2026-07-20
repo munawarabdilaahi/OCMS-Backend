@@ -4,7 +4,7 @@ export function notFound(req, res, next) {
     next(error);
 }
 
-export function errorHandler(error, req, res, next) {
+export function errorHandler(error, req, res, _next) {
     let statusCode = error.statusCode || 500;
     let message = error.message || 'Internal server error';
 

@@ -1,8 +1,12 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import prisma from '../config/db.js';
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
+const JWT_ALGORITHM = 'HS256';
+const JWT_ISSUER = 'ocms-api';
+const JWT_AUDIENCE = 'ocms-client';
 
 const PUBLIC_ROLES = ['Student', 'Teacher', 'Staff'];
 const BCRYPT_ROUNDS = 12;
@@ -11,11 +15,18 @@ function userDelegate() { return prisma.user; }
 function roleDelegate() { return prisma.role; }
 
 function signToken(user) {
-    return jwt.sign(
-        { id: user.id, email: user.email, role_id: user.role_id ?? user.role?.id },
-        process.env.JWT_SECRET,
-        { expiresIn: JWT_EXPIRES_IN },
-    );
+    const payload = {
+        id: user.id,
+        email: user.email,
+        role_id: user.role_id ?? user.role?.id,
+        jti: crypto.randomUUID(),
+    };
+    return jwt.sign(payload, process.env.JWT_SECRET, {
+        expiresIn: JWT_EXPIRES_IN,
+        algorithm: JWT_ALGORITHM,
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+    });
 }
 
 function userInclude() {
@@ -50,7 +61,7 @@ async function resolveRole({ role_id, roleId, role, roleName }) {
 
 export async function register(req, res, next) {
     try {
-        const { name, email, password, phone, role_id, roleId, role, roleName } = req.body;
+        const { name, email, password, phone, role, roleName } = req.body;
         const requestedRoleName = roleName || role;
 
         if (!name || !email || !password) {

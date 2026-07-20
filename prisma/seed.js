@@ -3,88 +3,82 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@ocms.edu';
+const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD;
+const SEED_ADMIN_NAME = process.env.SEED_ADMIN_NAME || 'System Administrator';
+const BCRYPT_ROUNDS = 12;
+
 async function main() {
-  const hashedPassword = await bcrypt.hash('Campus123', 10);
+    if (process.env.NODE_ENV === 'production' && !SEED_ADMIN_PASSWORD) {
+        console.error('FATAL: SEED_ADMIN_PASSWORD must be set when seeding in production.');
+        process.exit(1);
+    }
 
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@ocms.edu' },
-    update: {
-      password: hashedPassword
-    },
-    create: {
-      email: 'admin@ocms.edu',
-      password: hashedPassword,
-      name: 'Niko King',
-      role: {
-        connectOrCreate: {
-          where: { name: 'Admin' },
-          create: { name: 'Admin' }
-        }
-      }
-    },
-  });
+    const adminPassword = SEED_ADMIN_PASSWORD || 'ChangeMe123!';
+    console.log(`Seeding admin user: ${SEED_ADMIN_EMAIL}`);
+    if (!SEED_ADMIN_PASSWORD) {
+        console.warn('WARNING: Using default seed password. Set SEED_ADMIN_PASSWORD environment variable for production.');
+    }
 
-  console.log('Super Admin:', admin.email);
+    const hashedPassword = await bcrypt.hash(adminPassword, BCRYPT_ROUNDS);
 
-  await prisma.role.upsert({
-    where: { name: 'Student' },
-    update: {},
-    create: { name: 'Student' },
-  });
-
-  await prisma.role.upsert({
-    where: { name: 'Admin' },
-    update: {},
-    create: { name: 'Admin' },
-  });
-
-  await prisma.role.upsert({
-    where: { name: 'SuperAdmin' },
-    update: {},
-    create: { name: 'SuperAdmin' },
-  });
-
-  await prisma.role.upsert({
-    where: { name: 'Teacher' },
-    update: {},
-    create: { name: 'Teacher' },
-  });
-
-  await prisma.role.upsert({
-    where: { name: 'Accountant' },
-    update: {},
-    create: { name: 'Accountant' },
-  });
-
-  console.log('Roles seeded: Student, Admin, SuperAdmin, Teacher, Accountant.');
-
-  const departmentNames = [
-    'Computer Science',
-    'Business',
-    'Engineering',
-    'Health Sciences',
-    'Education',
-  ];
-
-  for (const name of departmentNames) {
-    await prisma.department.upsert({
-      where: { code: name.toLowerCase().replace(/\s+/g, '-') },
-      update: {},
-      create: {
-        code: name.toLowerCase().replace(/\s+/g, '-'),
-        name,
-      },
+    const admin = await prisma.user.upsert({
+        where: { email: SEED_ADMIN_EMAIL },
+        update: {
+            password: hashedPassword,
+        },
+        create: {
+            email: SEED_ADMIN_EMAIL,
+            password: hashedPassword,
+            name: SEED_ADMIN_NAME,
+            role: {
+                connectOrCreate: {
+                    where: { name: 'Admin' },
+                    create: { name: 'Admin' },
+                },
+            },
+        },
     });
-  }
 
-  console.log(`Seeded ${departmentNames.length} departments.`);
+    console.log(`Admin user seeded: ${admin.email}`);
+
+    const roleNames = ['Student', 'Admin', 'SuperAdmin', 'Teacher', 'Accountant'];
+    for (const name of roleNames) {
+        await prisma.role.upsert({
+            where: { name },
+            update: {},
+            create: { name },
+        });
+    }
+    console.log(`Roles seeded: ${roleNames.join(', ')}`);
+
+    const departmentNames = [
+        'Computer Science',
+        'Business',
+        'Engineering',
+        'Health Sciences',
+        'Education',
+    ];
+
+    for (const name of departmentNames) {
+        await prisma.department.upsert({
+            where: { code: name.toLowerCase().replace(/\s+/g, '-') },
+            update: {},
+            create: {
+                code: name.toLowerCase().replace(/\s+/g, '-'),
+                name,
+            },
+        });
+    }
+
+    console.log(`Seeded ${departmentNames.length} departments.`);
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+    .catch((e) => {
+        console.error(e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

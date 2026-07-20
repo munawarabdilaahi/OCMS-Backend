@@ -6,7 +6,7 @@ const roleDelegate = () => prisma.role;
 
 function serializeUser(user) {
     if (!user) return null;
-    const { password, ...safe } = user;
+    const { password: _password, ...safe } = user;
     return {
         ...safe,
         role: user.role?.name || null,
