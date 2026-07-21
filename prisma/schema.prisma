@@ -17,18 +17,24 @@ model Role {
 }
 
 model User {
-  id         Int       @id @default(autoincrement())
-  name       String
-  email      String    @unique
-  password   String
-  phone      String?
-  status     String    @default("ACTIVE")
-  role_id    Int
-  role       Role      @relation(fields: [role_id], references: [id])
-  student    Student?
-  teacher    Teacher?
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
+  id                Int                    @id @default(autoincrement())
+  name              String
+  email             String                 @unique
+  password          String
+  phone             String?
+  status            String                 @default("ACTIVE")
+  role_id           Int
+  role              Role                   @relation(fields: [role_id], references: [id])
+  student           Student?
+  teacher           Teacher?
+  email_verified    Boolean                @default(false)
+  email_verify_token EmailVerifyToken?
+  last_login        DateTime?
+  refresh_tokens    RefreshToken[]
+  password_resets   PasswordResetToken[]
+  sessions          Session[]
+  created_at        DateTime               @default(now())
+  updated_at        DateTime               @updatedAt
 }
 
 model Department {
@@ -222,4 +228,61 @@ model Transaction {
   description String?
   reference  String?
   created_at DateTime @default(now())
+}
+
+model RefreshToken {
+  id           Int      @id @default(autoincrement())
+  token        String   @unique
+  user_id      Int
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  session_id   Int?
+  session      Session? @relation(fields: [session_id], references: [id], onDelete: SetNull)
+  user_agent   String?
+  ip_address   String?
+  expires_at   DateTime
+  revoked_at   DateTime?
+  created_at   DateTime @default(now())
+
+  @@index([token])
+  @@index([user_id])
+}
+
+model PasswordResetToken {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token_hash String   @unique
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime @default(now())
+
+  @@index([token_hash])
+  @@index([user_id])
+}
+
+model EmailVerifyToken {
+  id         Int      @id @default(autoincrement())
+  user_id    Int      @unique
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token_hash String   @unique
+  expires_at DateTime
+  verified_at DateTime?
+  created_at DateTime @default(now())
+
+  @@index([token_hash])
+}
+
+model Session {
+  id              Int           @id @default(autoincrement())
+  user_id         Int
+  user            User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  refresh_tokens  RefreshToken[]
+  user_agent      String?
+  ip_address      String?
+  last_active     DateTime      @default(now())
+  expires_at      DateTime
+  revoked_at      DateTime?
+  created_at      DateTime      @default(now())
+
+  @@index([user_id])
 }
