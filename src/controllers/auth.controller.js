@@ -458,8 +458,6 @@ export async function forgotPassword(req, res, next) {
             },
         });
 
-        console.log(`[PASSWORD RESET] Token for ${email}: ${rawToken}`);
-
         return res.status(200).json({
             success: true,
             message: 'If an account exists with this email, password reset instructions have been sent.',
@@ -599,8 +597,6 @@ export async function generateEmailVerification(req, res, next) {
                 expires_at: expiresAt,
             },
         });
-
-        console.log(`[EMAIL VERIFY] Token for ${user.email}: ${rawToken}`);
 
         return res.status(200).json({
             success: true,

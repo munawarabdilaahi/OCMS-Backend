@@ -22,7 +22,7 @@ router.post('/register', authLimiter, register);
 router.post('/login', authLimiter, login);
 router.post('/forgot-password', authLimiter, forgotPassword);
 router.post('/reset-password', authLimiter, resetPassword);
-router.post('/refresh-token', refreshToken);
+router.post('/refresh-token', authLimiter, refreshToken);
 
 router.get('/me', authenticate, getMe);
 router.post('/logout', authenticate, logout);
