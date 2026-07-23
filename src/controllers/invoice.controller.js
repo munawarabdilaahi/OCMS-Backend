@@ -1,12 +1,7 @@
 import prisma from '../config/db.js';
+import { generateInvoiceNumber } from '../utils/crypto.js';
 
 const invoiceDelegate = () => prisma.invoice;
-
-function generateInvoiceNumber() {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `INV-${timestamp}-${random}`;
-}
 
 function serializeInvoice(invoice) {
     if (!invoice) return null;

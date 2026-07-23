@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import prisma from '../config/db.js';
 import { hashToken } from '../utils/hash.js';
+import { generateToken } from '../utils/crypto.js';
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 const JWT_REFRESH_EXPIRES_IN = '7d';
@@ -442,7 +443,7 @@ export async function forgotPassword(req, res, next) {
             data: { used_at: new Date() },
         });
 
-        const rawToken = crypto.randomBytes(32).toString('hex');
+        const rawToken = generateToken();
         const tokenHash = hashToken(rawToken);
         const expiresAt = new Date();
         expiresAt.setMinutes(expiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES);
@@ -582,7 +583,7 @@ export async function generateEmailVerification(req, res, next) {
             data: { verified_at: new Date() },
         });
 
-        const rawToken = crypto.randomBytes(32).toString('hex');
+        const rawToken = generateToken();
         const tokenHash = hashToken(rawToken);
         const expiresAt = new Date();
         expiresAt.setMinutes(expiresAt.getMinutes() + EMAIL_VERIFY_EXPIRY_MINUTES);
