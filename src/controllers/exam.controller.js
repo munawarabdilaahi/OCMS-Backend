@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { isAllowedStatus } from '../utils/validation.js';
 
 const ALLOWED_EXAM_STATUSES = ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 const ALLOWED_RESULT_STATUSES = ['DRAFT', 'PUBLISHED', 'REVIEWED'];
@@ -47,7 +48,7 @@ export async function createExamSchedule(req, res, next) {
         }
 
         const resolvedStatus = status || 'SCHEDULED';
-        if (!ALLOWED_EXAM_STATUSES.includes(resolvedStatus)) {
+        if (!isAllowedStatus(resolvedStatus, ALLOWED_EXAM_STATUSES)) {
             return res.status(400).json({
                 success: false,
                 message: `Invalid status. Allowed values: ${ALLOWED_EXAM_STATUSES.join(', ')}`,
@@ -115,7 +116,7 @@ export async function updateExamSchedule(req, res, next) {
 
         const { course_id, courseId, title, exam_type, examType, exam_date, examDate, start_time, startTime, end_time, endTime, room, status } = req.body;
 
-        if (status && !ALLOWED_EXAM_STATUSES.includes(status)) {
+        if (status && !isAllowedStatus(status, ALLOWED_EXAM_STATUSES)) {
             return res.status(400).json({
                 success: false,
                 message: `Invalid status. Allowed values: ${ALLOWED_EXAM_STATUSES.join(', ')}`,
@@ -182,7 +183,7 @@ export async function submitExamResult(req, res, next) {
         }
 
         const resolvedStatus = status || 'PUBLISHED';
-        if (!ALLOWED_RESULT_STATUSES.includes(resolvedStatus)) {
+        if (!isAllowedStatus(resolvedStatus, ALLOWED_RESULT_STATUSES)) {
             return res.status(400).json({
                 success: false,
                 message: `Invalid status. Allowed values: ${ALLOWED_RESULT_STATUSES.join(', ')}`,
@@ -260,7 +261,7 @@ export async function createCourseExam(req, res, next) {
         }
 
         const resolvedStatus = status || 'DRAFT';
-        if (!ALLOWED_COURSE_EXAM_STATUSES.includes(resolvedStatus)) {
+        if (!isAllowedStatus(resolvedStatus, ALLOWED_COURSE_EXAM_STATUSES)) {
             return res.status(400).json({
                 success: false,
                 message: `Invalid status. Allowed values: ${ALLOWED_COURSE_EXAM_STATUSES.join(', ')}`,

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
+import { isInactive } from '../utils/validation.js';
 
 const JWT_ALGORITHM = 'HS256';
 const JWT_ISSUER = 'ocms-api';
@@ -52,8 +53,7 @@ export function authorize(...allowedRoles) {
             if (!user) {
                 return res.status(401).json({ success: false, message: 'User not found.' });
             }
-            const inactiveStatuses = ['INACTIVE', 'SUSPENDED', 'DELETED', 'DISABLED'];
-            if (inactiveStatuses.includes(String(user.status || '').toUpperCase())) {
+            if (isInactive(user.status)) {
                 return res.status(403).json({ success: false, message: 'Account is not active.' });
             }
             const roleName = user.role?.name;

@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { isAllowedStatus } from '../utils/validation.js';
 
 const attendanceDelegate = () => prisma.attendance;
 
@@ -32,10 +33,10 @@ export async function createAttendance(req, res, next) {
             return res.status(400).json({ success: false, message: 'student_id, course_id, date, and status are required.' });
         }
 
-        const allowedStatuses = ['PRESENT', 'ABSENT', 'LATE'];
+        const ATTENDANCE_STATUSES = ['PRESENT', 'ABSENT', 'LATE'];
         const resolvedStatus = String(status).toUpperCase();
-        if (!allowedStatuses.includes(resolvedStatus)) {
-            return res.status(400).json({ success: false, message: `Invalid status. Allowed: ${allowedStatuses.join(', ')}` });
+        if (!isAllowedStatus(resolvedStatus, ATTENDANCE_STATUSES)) {
+            return res.status(400).json({ success: false, message: `Invalid status. Allowed: ${ATTENDANCE_STATUSES.join(', ')}` });
         }
 
         const existing = await attendanceDelegate().findUnique({
@@ -146,13 +147,13 @@ export async function updateAttendance(req, res, next) {
         }
 
         const { status, remarks } = req.body;
-        const allowedStatuses = ['PRESENT', 'ABSENT', 'LATE'];
+        const ATTENDANCE_STATUSES = ['PRESENT', 'ABSENT', 'LATE'];
 
         const updateData = {};
         if (status !== undefined) {
             const resolvedStatus = String(status).toUpperCase();
-            if (!allowedStatuses.includes(resolvedStatus)) {
-                return res.status(400).json({ success: false, message: `Invalid status. Allowed: ${allowedStatuses.join(', ')}` });
+            if (!isAllowedStatus(resolvedStatus, ATTENDANCE_STATUSES)) {
+                return res.status(400).json({ success: false, message: `Invalid status. Allowed: ${ATTENDANCE_STATUSES.join(', ')}` });
             }
             updateData.status = resolvedStatus;
         }

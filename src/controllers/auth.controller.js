@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import prisma from '../config/db.js';
 import { hashToken } from '../utils/hash.js';
 import { generateToken } from '../utils/crypto.js';
+import { isInactive } from '../utils/validation.js';
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 const JWT_REFRESH_EXPIRES_IN = '7d';
@@ -117,9 +118,8 @@ export async function getMe(req, res, next) {
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const inactiveStatuses = ['INACTIVE', 'SUSPENDED', 'DELETED', 'DISABLED'];
-        if (inactiveStatuses.includes(String(user.status || '').toUpperCase())) {
-            return res.status(403).json({ success: false, message: 'Account is not active.' });
+        if (isInactive(user.status)) {
+            return res.status(403).json({ success: false, message: 'This user account is not active.' });
         }
         return res.status(200).json({
             success: true,
@@ -256,8 +256,7 @@ export async function login(req, res, next) {
             });
         }
 
-        const inactiveStatuses = ['INACTIVE', 'SUSPENDED', 'DELETED', 'DISABLED'];
-        if (inactiveStatuses.includes(String(user.status || '').toUpperCase())) {
+        if (isInactive(user.status)) {
             return res.status(403).json({
                 success: false,
                 message: 'This user account is not active.',
@@ -358,8 +357,7 @@ export async function refreshToken(req, res, next) {
             });
         }
 
-        const inactiveStatuses = ['INACTIVE', 'SUSPENDED', 'DELETED', 'DISABLED'];
-        if (inactiveStatuses.includes(String(user.status || '').toUpperCase())) {
+        if (isInactive(user.status)) {
             return res.status(403).json({
                 success: false,
                 message: 'Account is not active.',
