@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import prisma from '../config/db.js';
+import { hashToken } from '../utils/hash.js';
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 const JWT_REFRESH_EXPIRES_IN = '7d';
@@ -17,10 +18,6 @@ const EMAIL_VERIFY_EXPIRY_MINUTES = 1440;
 
 function userDelegate() { return prisma.user; }
 function roleDelegate() { return prisma.role; }
-
-function hashToken(token) {
-    return crypto.createHash('sha256').update(token).digest('hex');
-}
 
 function signAccessToken(user) {
     const payload = {
