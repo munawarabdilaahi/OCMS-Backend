@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { getPaginationParams } from '../utils/pagination.js';
 
 const paymentDelegate = () => prisma.payment;
 
@@ -50,11 +51,20 @@ async function updateInvoiceBalance(invoiceId, tx) {
     });
 }
 
+const ALLOWED_PAYMENT_METHODS = ['CASH', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'ONLINE'];
+
 export async function createPayment(req, res, next) {
     try {
         const { invoice_id, amount, payment_method, reference_number, notes, status = 'Completed' } = req.body;
         if (!invoice_id || !amount || !payment_method) {
             return res.status(400).json({ success: false, message: 'invoice_id, amount, and payment_method are required.' });
+        }
+        const numericAmount = Number(amount);
+        if (isNaN(numericAmount) || numericAmount <= 0) {
+            return res.status(400).json({ success: false, message: 'Amount must be a positive number.' });
+        }
+        if (!ALLOWED_PAYMENT_METHODS.includes(payment_method.toUpperCase())) {
+            return res.status(400).json({ success: false, message: `Invalid payment_method. Allowed values: ${ALLOWED_PAYMENT_METHODS.join(', ')}` });
         }
         const invoice = await prisma.invoice.findUnique({ where: { id: Number(invoice_id) } });
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
@@ -63,7 +73,7 @@ export async function createPayment(req, res, next) {
             const newPayment = await tx.payment.create({
                 data: {
                     invoice_id: Number(invoice_id),
-                    amount: Number(amount),
+                    amount: numericAmount,
                     payment_method,
                     reference_number: reference_number || null,
                     notes: notes || null,
@@ -75,7 +85,7 @@ export async function createPayment(req, res, next) {
                 data: {
                     payment_id: newPayment.id,
                     type: 'CREDIT',
-                    amount: Number(amount),
+                    amount: numericAmount,
                     description: `Payment via ${payment_method}`,
                     reference: reference_number || null,
                 },
@@ -98,7 +108,8 @@ export async function createPayment(req, res, next) {
 
 export async function listPayments(req, res, next) {
     try {
-        const { search, status, payment_method, student_id, page = 1, pageSize = 20 } = req.query;
+        const { search, status, payment_method, student_id } = req.query;
+        const { page, limit, skip } = getPaginationParams(req.query);
         const where = {};
         if (status) where.status = status;
         if (payment_method) where.payment_method = payment_method;
@@ -110,21 +121,20 @@ export async function listPayments(req, res, next) {
                 { invoice: { student: { user: { name: { contains: search } } } } },
             ];
         }
-        const skip = (Number(page) - 1) * Number(pageSize);
         const [payments, total] = await Promise.all([
             paymentDelegate().findMany({
                 where,
                 include: paymentInclude,
                 orderBy: { created_at: 'desc' },
                 skip,
-                take: Number(pageSize),
+                take: limit,
             }),
             paymentDelegate().count({ where }),
         ]);
         return res.status(200).json({
             success: true,
             data: payments.map(serializePayment),
-            meta: { total, page: Number(page), pageSize: Number(pageSize), pageCount: Math.ceil(total / Number(pageSize)) },
+            meta: { total, page, pageSize: limit, pageCount: Math.ceil(total / limit) },
         });
     } catch (error) {
         next(error);

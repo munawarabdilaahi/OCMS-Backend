@@ -214,10 +214,14 @@ export async function getExamResults(req, res, next) {
         const { page, limit, skip } = getPaginationParams(req.query);
 
         const where = {
-            ...(req.query.student_id ? { student_id: Number(req.query.student_id) } : {}),
             ...(req.query.course_id ? { course_id: Number(req.query.course_id) } : {}),
             ...(req.query.exam_schedule_id ? { exam_schedule_id: Number(req.query.exam_schedule_id) } : {}),
         };
+        if (req.user.roleName === 'Student') {
+            where.student = { user_id: req.user.id };
+        } else if (req.query.student_id) {
+            where.student_id = Number(req.query.student_id);
+        }
 
         const [results, total] = await Promise.all([
             examResultDelegate().findMany({

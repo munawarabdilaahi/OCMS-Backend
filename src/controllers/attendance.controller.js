@@ -77,7 +77,6 @@ export async function getAttendance(req, res, next) {
 
         const where = {
             ...(course_id ? { course_id } : {}),
-            ...(student_id ? { student_id } : {}),
             ...(status ? { status: String(status).toUpperCase() } : {}),
             ...(dateFrom || dateTo ? {
                 date: {
@@ -92,6 +91,11 @@ export async function getAttendance(req, res, next) {
                 ],
             } : {}),
         };
+        if (req.user.roleName === 'Student') {
+            where.student = { user_id: req.user.id };
+        } else if (student_id) {
+            where.student_id = student_id;
+        }
 
         const [records, total] = await Promise.all([
             attendanceDelegate().findMany({ where, include: attendanceInclude, skip, take: limit, orderBy: { date: 'desc' } }),
@@ -113,7 +117,8 @@ export async function getAttendanceStats(req, res, next) {
     try {
         const where = {};
         if (req.query.course_id) where.course_id = Number(req.query.course_id);
-        if (req.query.student_id) where.student_id = Number(req.query.student_id);
+        if (req.query.student_id && req.user.roleName !== 'Student') where.student_id = Number(req.query.student_id);
+        if (req.user.roleName === 'Student') where.student = { user_id: req.user.id };
 
         const [total, present, absent, late] = await Promise.all([
             attendanceDelegate().count({ where }),

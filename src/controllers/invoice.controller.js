@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { generateInvoiceNumber } from '../utils/crypto.js';
+import { getPaginationParams } from '../utils/pagination.js';
 
 const invoiceDelegate = () => prisma.invoice;
 
@@ -46,6 +47,10 @@ export async function createInvoice(req, res, next) {
         if (!student_id || !amount || !due_date) {
             return res.status(400).json({ success: false, message: 'student_id, amount, and due_date are required.' });
         }
+        const numericAmount = Number(amount);
+        if (isNaN(numericAmount) || numericAmount <= 0) {
+            return res.status(400).json({ success: false, message: 'Amount must be a positive number.' });
+        }
         const student = await prisma.student.findUnique({ where: { id: Number(student_id) } });
         if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
 
@@ -54,8 +59,8 @@ export async function createInvoice(req, res, next) {
                 invoice_number: generateInvoiceNumber(),
                 student_id: Number(student_id),
                 fee_structure_id: fee_structure_id ? Number(fee_structure_id) : null,
-                amount: Number(amount),
-                balance: Number(amount),
+                amount: numericAmount,
+                balance: numericAmount,
                 due_date: new Date(due_date),
                 academic_year: academic_year || null,
                 semester: semester || null,
@@ -71,7 +76,8 @@ export async function createInvoice(req, res, next) {
 
 export async function listInvoices(req, res, next) {
     try {
-        const { search, status, student_id, academic_year, page = 1, pageSize = 20 } = req.query;
+        const { search, status, student_id, academic_year } = req.query;
+        const { page, limit, skip } = getPaginationParams(req.query);
         const where = {};
         if (status) where.status = status;
         if (student_id) where.student_id = Number(student_id);
@@ -82,21 +88,20 @@ export async function listInvoices(req, res, next) {
                 { student: { user: { name: { contains: search } } } },
             ];
         }
-        const skip = (Number(page) - 1) * Number(pageSize);
         const [invoices, total] = await Promise.all([
             invoiceDelegate().findMany({
                 where,
                 include: invoiceInclude,
                 orderBy: { created_at: 'desc' },
                 skip,
-                take: Number(pageSize),
+                take: limit,
             }),
             invoiceDelegate().count({ where }),
         ]);
         return res.status(200).json({
             success: true,
             data: invoices.map(serializeInvoice),
-            meta: { total, page: Number(page), pageSize: Number(pageSize), pageCount: Math.ceil(total / Number(pageSize)) },
+            meta: { total, page, pageSize: limit, pageCount: Math.ceil(total / limit) },
         });
     } catch (error) {
         next(error);

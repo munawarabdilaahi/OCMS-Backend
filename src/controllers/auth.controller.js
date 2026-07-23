@@ -38,7 +38,7 @@ function signAccessToken(user) {
 function signRefreshToken(userId, sessionId) {
     return jwt.sign(
         { id: userId, sid: sessionId, type: 'refresh' },
-        process.env.JWT_SECRET,
+        process.env.JWT_REFRESH_SECRET,
         { expiresIn: JWT_REFRESH_EXPIRES_IN, algorithm: JWT_ALGORITHM }
     );
 }
@@ -141,6 +141,10 @@ export async function register(req, res, next) {
             });
         }
 
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email format.' });
+        }
+
         if (password.length < 8) {
             return res.status(400).json({
                 success: false,
@@ -235,6 +239,10 @@ export async function login(req, res, next) {
             });
         }
 
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email format.' });
+        }
+
         const user = await userDelegate().findUnique({
             where: { email },
             include: userInclude(),
@@ -297,7 +305,7 @@ export async function refreshToken(req, res, next) {
 
         let decoded;
         try {
-            decoded = jwt.verify(rawRefreshToken, process.env.JWT_SECRET, {
+            decoded = jwt.verify(rawRefreshToken, process.env.JWT_REFRESH_SECRET, {
                 algorithms: [JWT_ALGORITHM],
             });
         } catch {
@@ -424,6 +432,10 @@ export async function forgotPassword(req, res, next) {
                 success: false,
                 message: 'Email is required.',
             });
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email format.' });
         }
 
         const user = await userDelegate().findUnique({ where: { email } });

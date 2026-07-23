@@ -53,6 +53,7 @@ const studentDetailInclude = {
 };
 export async function createStudent(req, res, next) {
     try {
+        const ALLOWED_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
         const { name, email, password, phone, department_id, departmentId, admission_no, admissionNo, date_of_birth, dateOfBirth, gender, address, status = 'ACTIVE', } = req.body;
         if (!name || !email || !password || !(department_id || departmentId)) {
             return res.status(400).json({
@@ -60,6 +61,15 @@ export async function createStudent(req, res, next) {
                 message: 'Name, email, password, and department_id are required.',
             });
         }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email format.' });
+        }
+
+        if (gender && !ALLOWED_GENDERS.includes(gender.toUpperCase())) {
+            return res.status(400).json({ success: false, message: `Invalid gender. Allowed values: ${ALLOWED_GENDERS.join(', ')}` });
+        }
+
         const existingUser = await userDelegate().findUnique({ where: { email } });
         if (existingUser) {
             return res.status(409).json({
@@ -221,8 +231,9 @@ export async function getStudents(req, res, next) {
 }
 export async function getStudentById(req, res, next) {
     try {
+        const isStudentRole = req.user.roleName === 'Student';
         const student = await studentDelegate().findUnique({
-            where: { id: Number(req.params.id) },
+            where: isStudentRole ? { user_id: req.user.id } : { id: Number(req.params.id) },
             include: studentDetailInclude,
         });
         if (!student) {

@@ -71,6 +71,10 @@ export async function createUser(req, res, next) {
             return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
         }
 
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email format.' });
+        }
+
         const existing = await userDelegate().findUnique({ where: { email } });
         if (existing) {
             return res.status(409).json({ success: false, message: 'A user with this email already exists.' });

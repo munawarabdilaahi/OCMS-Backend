@@ -44,10 +44,19 @@ async function getTeacherRoleId() {
 
 export async function createTeacher(req, res, next) {
     try {
+        const ALLOWED_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
         const { name, email, password, phone, department_id, departmentId, employee_no, employeeNo, position, qualification, employment_date, employmentDate, gender, address, status = 'ACTIVE' } = req.body;
 
         if (!name || !email || !password) {
             return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email format.' });
+        }
+
+        if (gender && !ALLOWED_GENDERS.includes(gender.toUpperCase())) {
+            return res.status(400).json({ success: false, message: `Invalid gender. Allowed values: ${ALLOWED_GENDERS.join(', ')}` });
         }
 
         const existingUser = await userDelegate().findUnique({ where: { email } });

@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { getPaginationParams } from '../utils/pagination.js';
 
 const feeDelegate = () => prisma.feeStructure;
 
@@ -25,8 +26,12 @@ export async function createFee(req, res, next) {
         if (!name || amount === undefined || !academic_year) {
             return res.status(400).json({ success: false, message: 'Name, amount, and academic_year are required.' });
         }
+        const numericAmount = Number(amount);
+        if (isNaN(numericAmount) || numericAmount <= 0) {
+            return res.status(400).json({ success: false, message: 'Amount must be a positive number.' });
+        }
         const fee = await feeDelegate().create({
-            data: { name, description, amount: Number(amount), department_id: department_id || null, academic_year, semester, status },
+            data: { name, description, amount: numericAmount, department_id: department_id || null, academic_year, semester, status },
             include: { department: { select: { name: true } } },
         });
         return res.status(201).json({ success: true, message: 'Fee structure created.', data: serializeFee(fee) });
@@ -37,26 +42,26 @@ export async function createFee(req, res, next) {
 
 export async function listFees(req, res, next) {
     try {
-        const { search, status, academic_year, page = 1, pageSize = 20 } = req.query;
+        const { search, status, academic_year } = req.query;
+        const { page, limit, skip } = getPaginationParams(req.query);
         const where = {};
         if (search) where.name = { contains: search };
         if (status) where.status = status;
         if (academic_year) where.academic_year = academic_year;
-        const skip = (Number(page) - 1) * Number(pageSize);
         const [fees, total] = await Promise.all([
             feeDelegate().findMany({
                 where,
                 include: { department: { select: { name: true } } },
                 orderBy: { name: 'asc' },
                 skip,
-                take: Number(pageSize),
+                take: limit,
             }),
             feeDelegate().count({ where }),
         ]);
         return res.status(200).json({
             success: true,
             data: fees.map(serializeFee),
-            meta: { total, page: Number(page), pageSize: Number(pageSize), pageCount: Math.ceil(total / Number(pageSize)) },
+            meta: { total, page, pageSize: limit, pageCount: Math.ceil(total / limit) },
         });
     } catch (error) {
         next(error);
