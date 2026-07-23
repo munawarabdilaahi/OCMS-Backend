@@ -1,10 +1,10 @@
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import prisma from '../config/db.js';
 import { hashToken } from '../utils/hash.js';
 import { generateToken } from '../utils/crypto.js';
 import { isInactive } from '../utils/validation.js';
+import { hashPassword, comparePassword } from '../utils/password.js';
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 const JWT_REFRESH_EXPIRES_IN = '7d';
@@ -13,7 +13,6 @@ const JWT_ISSUER = 'ocms-api';
 const JWT_AUDIENCE = 'ocms-client';
 
 const PUBLIC_ROLES = ['Student', 'Teacher', 'Staff'];
-const BCRYPT_ROUNDS = 12;
 const SESSION_EXPIRY_DAYS = 30;
 const RESET_TOKEN_EXPIRY_MINUTES = 60;
 const EMAIL_VERIFY_EXPIRY_MINUTES = 1440;
@@ -193,7 +192,7 @@ export async function register(req, res, next) {
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+        const hashedPassword = await hashPassword(password);
         const now = new Date();
         const user = await userDelegate().create({
             data: {
@@ -248,7 +247,7 @@ export async function login(req, res, next) {
         }
 
         const storedPassword = user.password || user.password_hash || user.passwordHash;
-        const passwordMatches = await bcrypt.compare(password, storedPassword || '');
+        const passwordMatches = await comparePassword(password, storedPassword || '');
         if (!passwordMatches) {
             return res.status(401).json({
                 success: false,
@@ -530,7 +529,7 @@ export async function resetPassword(req, res, next) {
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+        const hashedPassword = await hashPassword(password);
 
         await prisma.$transaction([
             prisma.user.update({

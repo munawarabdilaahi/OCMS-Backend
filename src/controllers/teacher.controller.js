@@ -1,5 +1,5 @@
-import bcrypt from 'bcryptjs';
 import prisma from '../config/db.js';
+import { hashPassword } from '../utils/password.js';
 
 const userDelegate = () => prisma.user;
 const roleDelegate = () => prisma.role;
@@ -55,7 +55,7 @@ export async function createTeacher(req, res, next) {
         }
 
         const roleId = await getTeacherRoleId();
-        const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPassword = await hashPassword(password);
 
         const teacher = await prisma.$transaction(async (tx) => {
             const user = await tx.user.create({

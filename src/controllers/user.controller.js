@@ -1,5 +1,5 @@
-import bcrypt from 'bcryptjs';
 import prisma from '../config/db.js';
+import { hashPassword } from '../utils/password.js';
 
 const userDelegate = () => prisma.user;
 const roleDelegate = () => prisma.role;
@@ -87,7 +87,7 @@ export async function createUser(req, res, next) {
             return res.status(400).json({ success: false, message: 'Invalid role.' });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPassword = await hashPassword(password);
         const user = await userDelegate().create({
             data: { name, email, password: hashedPassword, phone, role_id: Number(resolvedRoleId), status },
             include: { role: true },
@@ -122,7 +122,7 @@ export async function updateUser(req, res, next) {
         if (phone !== undefined) updateData.phone = phone;
         if (status !== undefined) updateData.status = status;
         if (role_id !== undefined || roleId !== undefined) updateData.role_id = Number(role_id || roleId);
-        if (password) updateData.password = await bcrypt.hash(password, 12);
+        if (password) updateData.password = await hashPassword(password);
 
         const user = await userDelegate().update({ where: { id: userId }, data: updateData, include: { role: true } });
         return res.status(200).json({ success: true, message: 'User updated successfully.', data: serializeUser(user) });
