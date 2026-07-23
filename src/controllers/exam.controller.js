@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { isAllowedStatus } from '../utils/validation.js';
+import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
 
 const ALLOWED_EXAM_STATUSES = ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 const ALLOWED_RESULT_STATUSES = ['DRAFT', 'PUBLISHED', 'REVIEWED'];
@@ -30,10 +31,6 @@ function validateScore(value, fieldName) {
         return `${fieldName} must be a number between 0 and ${MAX_SCORE}.`;
     }
     return null;
-}
-
-function paginationMeta(page, limit, total) {
-    return { page, limit, total, totalPages: Math.ceil(total / limit) };
 }
 
 export async function createExamSchedule(req, res, next) {
@@ -75,9 +72,7 @@ export async function createExamSchedule(req, res, next) {
 
 export async function getExamSchedules(req, res, next) {
     try {
-        const page = Math.max(Number(req.query.page || 1), 1);
-        const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
-        const skip = (page - 1) * limit;
+        const { page, limit, skip } = getPaginationParams(req.query);
 
         const where = {
             ...(req.query.course_id ? { course_id: Number(req.query.course_id) } : {}),
@@ -99,7 +94,7 @@ export async function getExamSchedules(req, res, next) {
             success: true,
             message: 'Exam schedules retrieved successfully.',
             data: schedules,
-            meta: paginationMeta(page, limit, total),
+            meta: buildPaginationMeta(page, limit, total),
         });
     } catch (error) {
         next(error);
@@ -216,9 +211,7 @@ export async function submitExamResult(req, res, next) {
 
 export async function getExamResults(req, res, next) {
     try {
-        const page = Math.max(Number(req.query.page || 1), 1);
-        const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
-        const skip = (page - 1) * limit;
+        const { page, limit, skip } = getPaginationParams(req.query);
 
         const where = {
             ...(req.query.student_id ? { student_id: Number(req.query.student_id) } : {}),
@@ -245,7 +238,7 @@ export async function getExamResults(req, res, next) {
             success: true,
             message: 'Exam results retrieved successfully.',
             data: results,
-            meta: paginationMeta(page, limit, total),
+            meta: buildPaginationMeta(page, limit, total),
         });
     } catch (error) {
         next(error);
@@ -287,9 +280,7 @@ export async function createCourseExam(req, res, next) {
 
 export async function getCourseExams(req, res, next) {
     try {
-        const page = Math.max(Number(req.query.page || 1), 1);
-        const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
-        const skip = (page - 1) * limit;
+        const { page, limit, skip } = getPaginationParams(req.query);
 
         const where = {
             ...(req.query.course_id ? { course_id: Number(req.query.course_id) } : {}),
@@ -311,7 +302,7 @@ export async function getCourseExams(req, res, next) {
             success: true,
             message: 'Course exams retrieved successfully.',
             data: courseExams,
-            meta: paginationMeta(page, limit, total),
+            meta: buildPaginationMeta(page, limit, total),
         });
     } catch (error) {
         next(error);

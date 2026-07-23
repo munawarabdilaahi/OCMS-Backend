@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { isAllowedStatus } from '../utils/validation.js';
+import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
 
 const attendanceDelegate = () => prisma.attendance;
 
@@ -66,9 +67,7 @@ export async function createAttendance(req, res, next) {
 
 export async function getAttendance(req, res, next) {
     try {
-        const page = Math.max(Number(req.query.page || 1), 1);
-        const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
-        const skip = (page - 1) * limit;
+        const { page, limit, skip } = getPaginationParams(req.query);
         const search = req.query.search?.trim();
         const course_id = req.query.course_id ? Number(req.query.course_id) : undefined;
         const student_id = req.query.student_id ? Number(req.query.student_id) : undefined;
@@ -103,7 +102,7 @@ export async function getAttendance(req, res, next) {
             success: true,
             message: 'Attendance records retrieved successfully.',
             data: records.map(serializeAttendance),
-            meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            meta: buildPaginationMeta(page, limit, total),
         });
     } catch (error) {
         next(error);

@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
 
 const courseDelegate = () => prisma.course;
 
@@ -59,12 +60,10 @@ export async function createCourse(req, res, next) {
 
 export async function getCourses(req, res, next) {
     try {
-        const page = Math.max(Number(req.query.page || 1), 1);
-        const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
+        const { page, limit, skip } = getPaginationParams(req.query);
         const search = req.query.search?.trim();
         const status = req.query.status?.trim();
         const department_id = req.query.department_id ? Number(req.query.department_id) : undefined;
-        const skip = (page - 1) * limit;
 
         const where = {
             ...(status ? { status } : {}),
@@ -89,7 +88,7 @@ export async function getCourses(req, res, next) {
             success: true,
             message: 'Courses retrieved successfully.',
             data: courses.map(serializeCourse),
-            meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            meta: buildPaginationMeta(page, limit, total),
         });
     } catch (error) {
         next(error);

@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { hashPassword } from '../utils/password.js';
+import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
 
 const userDelegate = () => prisma.user;
 const roleDelegate = () => prisma.role;
@@ -16,12 +17,10 @@ function serializeUser(user) {
 
 export async function getUsers(req, res, next) {
     try {
-        const page = Math.max(Number(req.query.page || 1), 1);
-        const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
+        const { page, limit, skip } = getPaginationParams(req.query);
         const search = req.query.search?.trim();
         const role_id = req.query.role_id ? Number(req.query.role_id) : undefined;
         const status = req.query.status?.trim();
-        const skip = (page - 1) * limit;
 
         const where = {
             ...(role_id ? { role_id } : {}),
@@ -45,7 +44,7 @@ export async function getUsers(req, res, next) {
             success: true,
             message: 'Users retrieved successfully.',
             data: users.map(serializeUser),
-            meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            meta: buildPaginationMeta(page, limit, total),
         });
     } catch (error) {
         next(error);

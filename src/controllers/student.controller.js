@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { hashPassword } from '../utils/password.js';
+import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
 const userDelegate = () => prisma.user;
 const roleDelegate = () => prisma.role;
 const studentDelegate = () => prisma.student;
@@ -181,11 +182,9 @@ export async function getStats(req, res, next) {
 }
 export async function getStudents(req, res, next) {
     try {
-        const page = Math.max(Number(req.query.page || 1), 1);
-        const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
+        const { page, limit, skip } = getPaginationParams(req.query);
         const search = req.query.search?.trim();
         const status = req.query.status?.trim();
-        const skip = (page - 1) * limit;
         const where = {
             ...(status ? { status } : {}),
             ...(search
@@ -213,12 +212,7 @@ export async function getStudents(req, res, next) {
             success: true,
             message: 'Students retrieved successfully.',
             data: students.map(serializeStudent),
-            meta: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
+            meta: buildPaginationMeta(page, limit, total),
         });
     }
     catch (error) {
