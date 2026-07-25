@@ -2,7 +2,7 @@ import prisma from '../config/db.js';
 import { hashPassword } from '../utils/password.js';
 import { getPaginationParams } from '../utils/pagination.js';
 
-export async function getStudentRoleId() {
+async function getStudentRoleId() {
     const role = await prisma.role.findFirst({ where: { name: 'Student' } });
     if (role) return role.id;
     const created = await prisma.role.create({ data: { name: 'Student', permissions: '{}' } });

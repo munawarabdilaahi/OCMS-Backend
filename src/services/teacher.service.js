@@ -9,8 +9,6 @@ async function getTeacherRoleId() {
     return created.id;
 }
 
-export { getTeacherRoleId };
-
 const teacherDetailInclude = {
     user: { select: { name: true, email: true, phone: true } },
     department: true,

@@ -33,11 +33,11 @@ export function serializeUser(user) {
     };
 }
 
-export function userInclude() {
+function userInclude() {
     return { role: true };
 }
 
-export async function createSession(user, userAgent, ipAddress) {
+async function createSession(user, userAgent, ipAddress) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS);
     return prisma.session.create({
@@ -50,7 +50,7 @@ export async function createSession(user, userAgent, ipAddress) {
     });
 }
 
-export async function resolveRole({ role_id, roleId, role, roleName }) {
+async function resolveRole({ role_id, roleId, role, roleName }) {
     const requestedRoleId = role_id || roleId;
     const requestedRoleName = roleName || role;
     if (requestedRoleId) {
@@ -62,7 +62,7 @@ export async function resolveRole({ role_id, roleId, role, roleName }) {
     return prisma.role.findFirst({ where: { name: 'Student' } });
 }
 
-export function signAccessToken(user) {
+function signAccessToken(user) {
     const payload = {
         id: user.id,
         email: user.email,

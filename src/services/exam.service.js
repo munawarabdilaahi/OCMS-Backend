@@ -66,7 +66,7 @@ export async function getCourseExamById(id) {
     });
 }
 
-export function toDecimal(value) {
+function toDecimal(value) {
     if (value === undefined || value === null || value === '') return null;
     return Number(value);
 }
