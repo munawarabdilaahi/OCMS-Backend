@@ -1,33 +1,8 @@
-import prisma from '../config/db.js';
-import { getPaginationParams } from '../utils/pagination.js';
-
-const feeDelegate = () => prisma.feeStructure;
-
-function serializeFee(fee) {
-    if (!fee) return null;
-    return {
-        id: fee.id,
-        name: fee.name,
-        description: fee.description || '',
-        amount: Number(fee.amount),
-        department_id: fee.department_id,
-        department: fee.department?.name || null,
-        academic_year: fee.academic_year,
-        semester: fee.semester || '',
-        status: fee.status,
-        created_at: fee.created_at,
-        updated_at: fee.updated_at,
-    };
-}
+import { serializeFee, createFee as createFeeService, listFees as listFeesService, getFeeById as getFeeByIdService, updateFee as updateFeeService, deleteFee as deleteFeeService } from '../services/fee.service.js';
 
 export async function createFee(req, res, next) {
     try {
-        const { name, description, amount, department_id, academic_year, semester, status = 'ACTIVE' } = req.body;
-        const numericAmount = Number(amount);
-        const fee = await feeDelegate().create({
-            data: { name, description, amount: numericAmount, department_id: department_id || null, academic_year, semester, status },
-            include: { department: { select: { name: true } } },
-        });
+        const fee = await createFeeService(req.body);
         return res.status(201).json({ success: true, message: 'Fee structure created.', data: serializeFee(fee) });
     } catch (error) {
         next(error);
@@ -36,22 +11,7 @@ export async function createFee(req, res, next) {
 
 export async function listFees(req, res, next) {
     try {
-        const { search, status, academic_year } = req.query;
-        const { page, limit, skip } = getPaginationParams(req.query);
-        const where = {};
-        if (search) where.name = { contains: search };
-        if (status) where.status = status;
-        if (academic_year) where.academic_year = academic_year;
-        const [fees, total] = await Promise.all([
-            feeDelegate().findMany({
-                where,
-                include: { department: { select: { name: true } } },
-                orderBy: { name: 'asc' },
-                skip,
-                take: limit,
-            }),
-            feeDelegate().count({ where }),
-        ]);
+        const { fees, total, page, limit } = await listFeesService(req.query);
         return res.status(200).json({
             success: true,
             data: fees.map(serializeFee),
@@ -64,10 +24,7 @@ export async function listFees(req, res, next) {
 
 export async function getFeeById(req, res, next) {
     try {
-        const fee = await feeDelegate().findUnique({
-            where: { id: Number(req.params.id) },
-            include: { department: { select: { name: true } } },
-        });
+        const fee = await getFeeByIdService(req.params.id);
         if (!fee) return res.status(404).json({ success: false, message: 'Fee structure not found.' });
         return res.status(200).json({ success: true, data: serializeFee(fee) });
     } catch (error) {
@@ -77,23 +34,7 @@ export async function getFeeById(req, res, next) {
 
 export async function updateFee(req, res, next) {
     try {
-        const feeId = Number(req.params.id);
-        const existing = await feeDelegate().findUnique({ where: { id: feeId } });
-        if (!existing) return res.status(404).json({ success: false, message: 'Fee structure not found.' });
-        const { name, description, amount, department_id, academic_year, semester, status } = req.body;
-        const fee = await feeDelegate().update({
-            where: { id: feeId },
-            data: {
-                ...(name !== undefined ? { name } : {}),
-                ...(description !== undefined ? { description } : {}),
-                ...(amount !== undefined ? { amount: Number(amount) } : {}),
-                ...(department_id !== undefined ? { department_id: department_id || null } : {}),
-                ...(academic_year !== undefined ? { academic_year } : {}),
-                ...(semester !== undefined ? { semester } : {}),
-                ...(status !== undefined ? { status } : {}),
-            },
-            include: { department: { select: { name: true } } },
-        });
+        const fee = await updateFeeService(req.params.id, req.body);
         return res.status(200).json({ success: true, message: 'Fee structure updated.', data: serializeFee(fee) });
     } catch (error) {
         next(error);
@@ -102,14 +43,7 @@ export async function updateFee(req, res, next) {
 
 export async function deleteFee(req, res, next) {
     try {
-        const feeId = Number(req.params.id);
-        const existing = await feeDelegate().findUnique({ where: { id: feeId } });
-        if (!existing) return res.status(404).json({ success: false, message: 'Fee structure not found.' });
-        const invoiceCount = await prisma.invoice.count({ where: { fee_structure_id: feeId } });
-        if (invoiceCount > 0) {
-            return res.status(400).json({ success: false, message: `Cannot delete fee with ${invoiceCount} invoice(s). Remove invoices first.` });
-        }
-        await feeDelegate().delete({ where: { id: feeId } });
+        await deleteFeeService(req.params.id);
         return res.status(200).json({ success: true, message: 'Fee structure deleted.' });
     } catch (error) {
         next(error);

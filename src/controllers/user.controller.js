@@ -1,45 +1,9 @@
-import prisma from '../config/db.js';
-import { hashPassword } from '../utils/password.js';
-import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
-
-const userDelegate = () => prisma.user;
-const roleDelegate = () => prisma.role;
-
-function serializeUser(user) {
-    if (!user) return null;
-    const { password: _password, ...safe } = user;
-    return {
-        ...safe,
-        role: user.role?.name || null,
-        role_id: user.role_id,
-    };
-}
+import { buildPaginationMeta } from '../utils/pagination.js';
+import { serializeUser, getUsers as getUsersService, getUserById as getUserByIdService, createUser as createUserService, updateUser as updateUserService, deleteUser as deleteUserService } from '../services/user.service.js';
 
 export async function getUsers(req, res, next) {
     try {
-        const { page, limit, skip } = getPaginationParams(req.query);
-        const search = req.query.search?.trim();
-        const role_id = req.query.role_id ? Number(req.query.role_id) : undefined;
-        const status = req.query.status?.trim();
-
-        const where = {
-            ...(role_id ? { role_id } : {}),
-            ...(status ? { status } : {}),
-            ...(search
-                ? {
-                    OR: [
-                        { name: { contains: search, mode: 'insensitive' } },
-                        { email: { contains: search, mode: 'insensitive' } },
-                    ],
-                }
-                : {}),
-        };
-
-        const [users, total] = await Promise.all([
-            userDelegate().findMany({ where, include: { role: true }, skip, take: limit, orderBy: { created_at: 'desc' } }),
-            userDelegate().count({ where }),
-        ]);
-
+        const { users, total, page, limit } = await getUsersService(req.query);
         return res.status(200).json({
             success: true,
             message: 'Users retrieved successfully.',
@@ -53,7 +17,7 @@ export async function getUsers(req, res, next) {
 
 export async function getUserById(req, res, next) {
     try {
-        const user = await userDelegate().findUnique({ where: { id: Number(req.params.id) }, include: { role: true } });
+        const user = await getUserByIdService(req.params.id);
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
@@ -65,26 +29,7 @@ export async function getUserById(req, res, next) {
 
 export async function createUser(req, res, next) {
     try {
-        const { name, email, password, phone, role_id, roleId, status = 'ACTIVE' } = req.body;
-
-        const existing = await userDelegate().findUnique({ where: { email } });
-        if (existing) {
-            return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
-        }
-
-        const resolvedRoleId = role_id || roleId;
-
-        const role = await roleDelegate().findUnique({ where: { id: Number(resolvedRoleId) } });
-        if (!role) {
-            return res.status(400).json({ success: false, message: 'Invalid role.' });
-        }
-
-        const hashedPassword = await hashPassword(password);
-        const user = await userDelegate().create({
-            data: { name, email, password: hashedPassword, phone, role_id: Number(resolvedRoleId), status },
-            include: { role: true },
-        });
-
+        const user = await createUserService(req.body);
         return res.status(201).json({ success: true, message: 'User created successfully.', data: serializeUser(user) });
     } catch (error) {
         next(error);
@@ -93,30 +38,7 @@ export async function createUser(req, res, next) {
 
 export async function updateUser(req, res, next) {
     try {
-        const userId = Number(req.params.id);
-        const existing = await userDelegate().findUnique({ where: { id: userId } });
-        if (!existing) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
-        }
-
-        const { name, email, phone, role_id, roleId, status, password } = req.body;
-
-        if (email && email !== existing.email) {
-            const dup = await userDelegate().findUnique({ where: { email } });
-            if (dup) {
-                return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
-            }
-        }
-
-        const updateData = {};
-        if (name !== undefined) updateData.name = name;
-        if (email !== undefined) updateData.email = email;
-        if (phone !== undefined) updateData.phone = phone;
-        if (status !== undefined) updateData.status = status;
-        if (role_id !== undefined || roleId !== undefined) updateData.role_id = Number(role_id || roleId);
-        if (password) updateData.password = await hashPassword(password);
-
-        const user = await userDelegate().update({ where: { id: userId }, data: updateData, include: { role: true } });
+        const user = await updateUserService(req.params.id, req.body);
         return res.status(200).json({ success: true, message: 'User updated successfully.', data: serializeUser(user) });
     } catch (error) {
         next(error);
@@ -125,13 +47,7 @@ export async function updateUser(req, res, next) {
 
 export async function deleteUser(req, res, next) {
     try {
-        const userId = Number(req.params.id);
-        const existing = await userDelegate().findUnique({ where: { id: userId } });
-        if (!existing) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
-        }
-
-        await userDelegate().update({ where: { id: userId }, data: { status: 'DELETED' } });
+        await deleteUserService(req.params.id);
         return res.status(200).json({ success: true, message: 'User deleted successfully.' });
     } catch (error) {
         next(error);

@@ -1,67 +1,8 @@
-import prisma from '../config/db.js';
-import { generateInvoiceNumber } from '../utils/crypto.js';
-import { getPaginationParams } from '../utils/pagination.js';
-
-const invoiceDelegate = () => prisma.invoice;
-
-function serializeInvoice(invoice) {
-    if (!invoice) return null;
-    return {
-        id: invoice.id,
-        invoice_number: invoice.invoice_number,
-        student_id: invoice.student_id,
-        student: invoice.student?.user?.name || '',
-        student_email: invoice.student?.user?.email || '',
-        admission_no: invoice.student?.admission_no || '',
-        department: invoice.student?.department?.name || '',
-        fee_structure_id: invoice.fee_structure_id,
-        fee_name: invoice.fee_structure?.name || '',
-        amount: Number(invoice.amount),
-        paid_amount: Number(invoice.paid_amount),
-        balance: Number(invoice.balance),
-        status: invoice.status,
-        due_date: invoice.due_date,
-        academic_year: invoice.academic_year || '',
-        semester: invoice.semester || '',
-        notes: invoice.notes || '',
-        payment_count: invoice.payments?.length || 0,
-        created_at: invoice.created_at,
-        updated_at: invoice.updated_at,
-    };
-}
-
-const invoiceInclude = {
-    student: {
-        include: {
-            user: { select: { name: true, email: true } },
-            department: { select: { name: true } },
-        },
-    },
-    fee_structure: { select: { name: true } },
-    payments: { select: { id: true } },
-};
+import { serializeInvoice, createInvoice as createInvoiceService, listInvoices as listInvoicesService, getInvoiceById as getInvoiceByIdService, getInvoiceByNumber as getInvoiceByNumberService, updateInvoice as updateInvoiceService, deleteInvoice as deleteInvoiceService, getInvoiceStats as getInvoiceStatsService } from '../services/invoice.service.js';
 
 export async function createInvoice(req, res, next) {
     try {
-        const { student_id, fee_structure_id, amount, due_date, academic_year, semester, notes } = req.body;
-        const numericAmount = Number(amount);
-        const student = await prisma.student.findUnique({ where: { id: Number(student_id) } });
-        if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
-
-        const invoice = await invoiceDelegate().create({
-            data: {
-                invoice_number: generateInvoiceNumber(),
-                student_id: Number(student_id),
-                fee_structure_id: fee_structure_id ? Number(fee_structure_id) : null,
-                amount: numericAmount,
-                balance: numericAmount,
-                due_date: new Date(due_date),
-                academic_year: academic_year || null,
-                semester: semester || null,
-                notes: notes || null,
-            },
-            include: invoiceInclude,
-        });
+        const invoice = await createInvoiceService(req.body);
         return res.status(201).json({ success: true, message: 'Invoice created.', data: serializeInvoice(invoice) });
     } catch (error) {
         next(error);
@@ -70,28 +11,7 @@ export async function createInvoice(req, res, next) {
 
 export async function listInvoices(req, res, next) {
     try {
-        const { search, status, student_id, academic_year } = req.query;
-        const { page, limit, skip } = getPaginationParams(req.query);
-        const where = {};
-        if (status) where.status = status;
-        if (student_id) where.student_id = Number(student_id);
-        if (academic_year) where.academic_year = academic_year;
-        if (search) {
-            where.OR = [
-                { invoice_number: { contains: search } },
-                { student: { user: { name: { contains: search } } } },
-            ];
-        }
-        const [invoices, total] = await Promise.all([
-            invoiceDelegate().findMany({
-                where,
-                include: invoiceInclude,
-                orderBy: { created_at: 'desc' },
-                skip,
-                take: limit,
-            }),
-            invoiceDelegate().count({ where }),
-        ]);
+        const { invoices, total, page, limit } = await listInvoicesService(req.query);
         return res.status(200).json({
             success: true,
             data: invoices.map(serializeInvoice),
@@ -104,13 +24,7 @@ export async function listInvoices(req, res, next) {
 
 export async function getInvoiceById(req, res, next) {
     try {
-        const invoice = await invoiceDelegate().findUnique({
-            where: { id: Number(req.params.id) },
-            include: {
-                ...invoiceInclude,
-                payments: { orderBy: { created_at: 'desc' } },
-            },
-        });
+        const invoice = await getInvoiceByIdService(req.params.id);
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
         return res.status(200).json({ success: true, data: serializeInvoice(invoice) });
     } catch (error) {
@@ -120,13 +34,7 @@ export async function getInvoiceById(req, res, next) {
 
 export async function getInvoiceByNumber(req, res, next) {
     try {
-        const invoice = await invoiceDelegate().findUnique({
-            where: { invoice_number: req.params.invoiceNumber },
-            include: {
-                ...invoiceInclude,
-                payments: { orderBy: { created_at: 'desc' } },
-            },
-        });
+        const invoice = await getInvoiceByNumberService(req.params.invoiceNumber);
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
         return res.status(200).json({ success: true, data: serializeInvoice(invoice) });
     } catch (error) {
@@ -136,21 +44,7 @@ export async function getInvoiceByNumber(req, res, next) {
 
 export async function updateInvoice(req, res, next) {
     try {
-        const invoiceId = Number(req.params.id);
-        const existing = await invoiceDelegate().findUnique({ where: { id: invoiceId } });
-        if (!existing) return res.status(404).json({ success: false, message: 'Invoice not found.' });
-        const { due_date, academic_year, semester, notes, status } = req.body;
-        const invoice = await invoiceDelegate().update({
-            where: { id: invoiceId },
-            data: {
-                ...(due_date !== undefined ? { due_date: new Date(due_date) } : {}),
-                ...(academic_year !== undefined ? { academic_year } : {}),
-                ...(semester !== undefined ? { semester } : {}),
-                ...(notes !== undefined ? { notes } : {}),
-                ...(status !== undefined ? { status } : {}),
-            },
-            include: invoiceInclude,
-        });
+        const invoice = await updateInvoiceService(req.params.id, req.body);
         return res.status(200).json({ success: true, message: 'Invoice updated.', data: serializeInvoice(invoice) });
     } catch (error) {
         next(error);
@@ -159,14 +53,7 @@ export async function updateInvoice(req, res, next) {
 
 export async function deleteInvoice(req, res, next) {
     try {
-        const invoiceId = Number(req.params.id);
-        const existing = await invoiceDelegate().findUnique({ where: { id: invoiceId } });
-        if (!existing) return res.status(404).json({ success: false, message: 'Invoice not found.' });
-        const paymentCount = await prisma.payment.count({ where: { invoice_id: invoiceId } });
-        if (paymentCount > 0) {
-            return res.status(400).json({ success: false, message: `Cannot delete invoice with ${paymentCount} payment(s). Remove payments first.` });
-        }
-        await invoiceDelegate().delete({ where: { id: invoiceId } });
+        await deleteInvoiceService(req.params.id);
         return res.status(200).json({ success: true, message: 'Invoice deleted.' });
     } catch (error) {
         next(error);
@@ -175,28 +62,8 @@ export async function deleteInvoice(req, res, next) {
 
 export async function getInvoiceStats(req, res, next) {
     try {
-        const { student_id } = req.query;
-        const where = {};
-        if (student_id) where.student_id = Number(student_id);
-
-        const [totalInvoiced, outstanding, paid, overdue, openCount] = await Promise.all([
-            invoiceDelegate().aggregate({ where, _sum: { amount: true } }),
-            invoiceDelegate().aggregate({ where: { ...where, status: { in: ['Pending', 'Partial', 'Overdue'] } }, _sum: { balance: true } }),
-            invoiceDelegate().aggregate({ where: { ...where, status: 'Paid' }, _sum: { amount: true } }),
-            invoiceDelegate().aggregate({ where: { ...where, status: 'Overdue' }, _sum: { balance: true } }),
-            invoiceDelegate().count({ where: { ...where, status: { in: ['Pending', 'Partial', 'Overdue'] } } }),
-        ]);
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                total_invoiced: Number(totalInvoiced._sum.amount || 0),
-                outstanding_balance: Number(outstanding._sum.balance || 0),
-                total_paid: Number(paid._sum.amount || 0),
-                overdue_balance: Number(overdue._sum.balance || 0),
-                open_invoices: openCount,
-            },
-        });
+        const data = await getInvoiceStatsService(req.query);
+        return res.status(200).json({ success: true, data });
     } catch (error) {
         next(error);
     }
