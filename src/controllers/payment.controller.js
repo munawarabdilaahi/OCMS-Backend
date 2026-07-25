@@ -51,21 +51,10 @@ async function updateInvoiceBalance(invoiceId, tx) {
     });
 }
 
-const ALLOWED_PAYMENT_METHODS = ['CASH', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'ONLINE'];
-
 export async function createPayment(req, res, next) {
     try {
         const { invoice_id, amount, payment_method, reference_number, notes, status = 'Completed' } = req.body;
-        if (!invoice_id || !amount || !payment_method) {
-            return res.status(400).json({ success: false, message: 'invoice_id, amount, and payment_method are required.' });
-        }
         const numericAmount = Number(amount);
-        if (isNaN(numericAmount) || numericAmount <= 0) {
-            return res.status(400).json({ success: false, message: 'Amount must be a positive number.' });
-        }
-        if (!ALLOWED_PAYMENT_METHODS.includes(payment_method.toUpperCase())) {
-            return res.status(400).json({ success: false, message: `Invalid payment_method. Allowed values: ${ALLOWED_PAYMENT_METHODS.join(', ')}` });
-        }
         const invoice = await prisma.invoice.findUnique({ where: { id: Number(invoice_id) } });
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
 

@@ -44,13 +44,7 @@ const invoiceInclude = {
 export async function createInvoice(req, res, next) {
     try {
         const { student_id, fee_structure_id, amount, due_date, academic_year, semester, notes } = req.body;
-        if (!student_id || !amount || !due_date) {
-            return res.status(400).json({ success: false, message: 'student_id, amount, and due_date are required.' });
-        }
         const numericAmount = Number(amount);
-        if (isNaN(numericAmount) || numericAmount <= 0) {
-            return res.status(400).json({ success: false, message: 'Amount must be a positive number.' });
-        }
         const student = await prisma.student.findUnique({ where: { id: Number(student_id) } });
         if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
 

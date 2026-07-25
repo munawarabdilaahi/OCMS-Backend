@@ -23,13 +23,7 @@ function serializeFee(fee) {
 export async function createFee(req, res, next) {
     try {
         const { name, description, amount, department_id, academic_year, semester, status = 'ACTIVE' } = req.body;
-        if (!name || amount === undefined || !academic_year) {
-            return res.status(400).json({ success: false, message: 'Name, amount, and academic_year are required.' });
-        }
         const numericAmount = Number(amount);
-        if (isNaN(numericAmount) || numericAmount <= 0) {
-            return res.status(400).json({ success: false, message: 'Amount must be a positive number.' });
-        }
         const fee = await feeDelegate().create({
             data: { name, description, amount: numericAmount, department_id: department_id || null, academic_year, semester, status },
             include: { department: { select: { name: true } } },

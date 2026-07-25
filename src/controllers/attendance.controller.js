@@ -1,5 +1,4 @@
 import prisma from '../config/db.js';
-import { isAllowedStatus } from '../utils/validation.js';
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
 
 const attendanceDelegate = () => prisma.attendance;
@@ -29,16 +28,7 @@ function serializeAttendance(record) {
 export async function createAttendance(req, res, next) {
     try {
         const { student_id, studentId, course_id, courseId, date, status, remarks, teacher_id, teacherId } = req.body;
-
-        if (!(student_id || studentId) || !(course_id || courseId) || !date || !status) {
-            return res.status(400).json({ success: false, message: 'student_id, course_id, date, and status are required.' });
-        }
-
-        const ATTENDANCE_STATUSES = ['PRESENT', 'ABSENT', 'LATE'];
         const resolvedStatus = String(status).toUpperCase();
-        if (!isAllowedStatus(resolvedStatus, ATTENDANCE_STATUSES)) {
-            return res.status(400).json({ success: false, message: `Invalid status. Allowed: ${ATTENDANCE_STATUSES.join(', ')}` });
-        }
 
         const existing = await attendanceDelegate().findUnique({
             where: { student_id_course_id_date: { student_id: Number(student_id || studentId), course_id: Number(course_id || courseId), date: new Date(date) } },
@@ -151,14 +141,10 @@ export async function updateAttendance(req, res, next) {
         }
 
         const { status, remarks } = req.body;
-        const ATTENDANCE_STATUSES = ['PRESENT', 'ABSENT', 'LATE'];
 
         const updateData = {};
         if (status !== undefined) {
             const resolvedStatus = String(status).toUpperCase();
-            if (!isAllowedStatus(resolvedStatus, ATTENDANCE_STATUSES)) {
-                return res.status(400).json({ success: false, message: `Invalid status. Allowed: ${ATTENDANCE_STATUSES.join(', ')}` });
-            }
             updateData.status = resolvedStatus;
         }
         if (remarks !== undefined) updateData.remarks = remarks;
@@ -187,10 +173,6 @@ export async function deleteAttendance(req, res, next) {
 export async function bulkCreateAttendance(req, res, next) {
     try {
         const { course_id, courseId, date, records, teacher_id, teacherId } = req.body;
-
-        if (!(course_id || courseId) || !date || !Array.isArray(records) || records.length === 0) {
-            return res.status(400).json({ success: false, message: 'course_id, date, and records array are required.' });
-        }
 
         const resolvedCourseId = Number(course_id || courseId);
         const resolvedDate = new Date(date);

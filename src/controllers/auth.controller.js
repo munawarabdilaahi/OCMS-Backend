@@ -1,89 +1,25 @@
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import prisma from '../config/db.js';
 import { hashToken } from '../utils/hash.js';
 import { generateToken } from '../utils/crypto.js';
 import { isInactive } from '../utils/validation.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
+import { serializeUser, createSession, resolveRole, signAccessToken, userInclude } from '../services/auth.service.js';
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 const JWT_REFRESH_EXPIRES_IN = '7d';
 const JWT_ALGORITHM = 'HS256';
-const JWT_ISSUER = 'ocms-api';
-const JWT_AUDIENCE = 'ocms-client';
 
 const PUBLIC_ROLES = ['Student', 'Teacher', 'Staff'];
-const SESSION_EXPIRY_DAYS = 30;
 const RESET_TOKEN_EXPIRY_MINUTES = 60;
 const EMAIL_VERIFY_EXPIRY_MINUTES = 1440;
 
 function userDelegate() { return prisma.user; }
-function roleDelegate() { return prisma.role; }
-
-function signAccessToken(user) {
-    const payload = {
-        id: user.id,
-        email: user.email,
-        role_id: user.role_id ?? user.role?.id,
-        jti: crypto.randomUUID(),
-    };
-    return jwt.sign(payload, process.env.JWT_SECRET, {
-        expiresIn: JWT_EXPIRES_IN,
-        algorithm: JWT_ALGORITHM,
-        issuer: JWT_ISSUER,
-        audience: JWT_AUDIENCE,
-    });
-}
-
 function signRefreshToken(userId, sessionId) {
     return jwt.sign(
         { id: userId, sid: sessionId, type: 'refresh' },
         process.env.JWT_REFRESH_SECRET,
         { expiresIn: JWT_REFRESH_EXPIRES_IN, algorithm: JWT_ALGORITHM }
     );
-}
-
-function userInclude() {
-    return { role: true };
-}
-
-function serializeUser(user) {
-    if (!user) return null;
-    const safeUser = { ...user };
-    delete safeUser.password;
-    delete safeUser.password_hash;
-    delete safeUser.passwordHash;
-    delete safeUser.reset_token;
-    delete safeUser.resetToken;
-    return {
-        ...safeUser,
-        role: user.role ? { ...user.role, permissions: user.role.permissions || {} } : null,
-    };
-}
-
-async function resolveRole({ role_id, roleId, role, roleName }) {
-    const requestedRoleId = role_id || roleId;
-    const requestedRoleName = roleName || role;
-    if (requestedRoleId) {
-        return roleDelegate().findUnique({ where: { id: Number(requestedRoleId) } });
-    }
-    if (requestedRoleName) {
-        return roleDelegate().findFirst({ where: { name: requestedRoleName } });
-    }
-    return roleDelegate().findFirst({ where: { name: 'Student' } });
-}
-
-async function createSession(user, userAgent, ipAddress) {
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS);
-    return prisma.session.create({
-        data: {
-            user_id: user.id,
-            user_agent: userAgent || null,
-            ip_address: ipAddress || null,
-            expires_at: expiresAt,
-        },
-    });
 }
 
 async function createRefreshToken(user, session, userAgent, ipAddress) {
@@ -133,45 +69,6 @@ export async function register(req, res, next) {
     try {
         const { name, email, password, phone, role, roleName } = req.body;
         const requestedRoleName = roleName || role;
-
-        if (!name || !email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Name, email, and password are required.',
-            });
-        }
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return res.status(400).json({ success: false, message: 'Invalid email format.' });
-        }
-
-        if (password.length < 8) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must be at least 8 characters long.',
-            });
-        }
-
-        if (!/[A-Z]/.test(password)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must contain at least one uppercase letter.',
-            });
-        }
-
-        if (!/[a-z]/.test(password)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must contain at least one lowercase letter.',
-            });
-        }
-
-        if (!/\d/.test(password)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must contain at least one digit.',
-            });
-        }
 
         if (requestedRoleName && !PUBLIC_ROLES.includes(requestedRoleName)) {
             return res.status(403).json({
@@ -232,17 +129,6 @@ export async function register(req, res, next) {
 export async function login(req, res, next) {
     try {
         const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email and password are required.',
-            });
-        }
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return res.status(400).json({ success: false, message: 'Invalid email format.' });
-        }
-
         const user = await userDelegate().findUnique({
             where: { email },
             include: userInclude(),
@@ -427,17 +313,6 @@ export async function logout(req, res, next) {
 export async function forgotPassword(req, res, next) {
     try {
         const { email } = req.body;
-        if (!email) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email is required.',
-            });
-        }
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return res.status(400).json({ success: false, message: 'Invalid email format.' });
-        }
-
         const user = await userDelegate().findUnique({ where: { email } });
 
         if (!user) {
@@ -477,44 +352,7 @@ export async function forgotPassword(req, res, next) {
 
 export async function resetPassword(req, res, next) {
     try {
-        const { token, password, confirmPassword } = req.body;
-        if (!token) {
-            return res.status(400).json({
-                success: false,
-                message: 'Reset token is required.',
-            });
-        }
-        if (!password || password.length < 8) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must be at least 8 characters.',
-            });
-        }
-        if (!/[A-Z]/.test(password)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must contain at least one uppercase letter.',
-            });
-        }
-        if (!/[a-z]/.test(password)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must contain at least one lowercase letter.',
-            });
-        }
-        if (!/\d/.test(password)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must contain at least one digit.',
-            });
-        }
-        if (password !== confirmPassword) {
-            return res.status(400).json({
-                success: false,
-                message: 'Passwords must match.',
-            });
-        }
-
+        const { token, password } = req.body;
         const tokenHash = hashToken(token);
         const resetRecord = await prisma.passwordResetToken.findUnique({
             where: { token_hash: tokenHash },
@@ -618,13 +456,6 @@ export async function generateEmailVerification(req, res, next) {
 export async function verifyEmail(req, res, next) {
     try {
         const { token } = req.body;
-        if (!token) {
-            return res.status(400).json({
-                success: false,
-                message: 'Verification token is required.',
-            });
-        }
-
         const tokenHash = hashToken(token);
         const verifyRecord = await prisma.emailVerifyToken.findUnique({
             where: { token_hash: tokenHash },

@@ -1,8 +1,7 @@
 import prisma from '../config/db.js';
-import { hashPassword } from '../utils/password.js';
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
+import { serializeStudent, createStudent as createStudentService } from '../services/student.service.js';
 const userDelegate = () => prisma.user;
-const roleDelegate = () => prisma.role;
 const studentDelegate = () => prisma.student;
 const studentInclude = {
     user: {
@@ -18,29 +17,7 @@ const studentInclude = {
         },
     },
 };
-function serializeStudent(student) {
-    if (!student)
-        return null;
-    return {
-        id: student.id,
-        name: student.user?.name || '',
-        email: student.user?.email || '',
-        phone: student.user?.phone || '',
-        gender: student.gender || '',
-        department: student.department?.name || '',
-        department_id: student.department_id,
-        status: student.status || '',
-        admission_no: student.admission_no || '',
-        date_of_birth: student.date_of_birth || null,
-        address: student.address || '',
-    };
-}
-async function getStudentRoleId() {
-    const role = await roleDelegate().findFirst({ where: { name: 'Student' } });
-    if (role) return role.id;
-    const created = await roleDelegate().create({ data: { name: 'Student', permissions: '{}' } });
-    return created.id;
-}
+
 const studentDetailInclude = {
     user: {
         select: {
@@ -53,63 +30,13 @@ const studentDetailInclude = {
 };
 export async function createStudent(req, res, next) {
     try {
-        const ALLOWED_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
-        const { name, email, password, phone, department_id, departmentId, admission_no, admissionNo, date_of_birth, dateOfBirth, gender, address, status = 'ACTIVE', } = req.body;
-        if (!name || !email || !password || !(department_id || departmentId)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Name, email, password, and department_id are required.',
-            });
-        }
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return res.status(400).json({ success: false, message: 'Invalid email format.' });
-        }
-
-        if (gender && !ALLOWED_GENDERS.includes(gender.toUpperCase())) {
-            return res.status(400).json({ success: false, message: `Invalid gender. Allowed values: ${ALLOWED_GENDERS.join(', ')}` });
-        }
-
-        const existingUser = await userDelegate().findUnique({ where: { email } });
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                message: 'A user with this email already exists.',
-            });
-        }
-        const roleId = await getStudentRoleId();
-        const hashedPassword = await hashPassword(password);
-        const student = await prisma.$transaction(async (tx) => {
-            const user = await tx.user.create({
-                data: {
-                    name,
-                    email,
-                    password: hashedPassword,
-                    phone,
-                    status,
-                    role_id: roleId,
-                },
-            });
-            return tx.student.create({
-                data: {
-                    user_id: user.id,
-                    department_id: Number(department_id || departmentId),
-                    admission_no: admission_no || admissionNo,
-                    date_of_birth: date_of_birth || dateOfBirth ? new Date(date_of_birth || dateOfBirth) : null,
-                    gender,
-                    address,
-                    status,
-                },
-                include: studentInclude,
-            });
-        });
+        const student = await createStudentService(req.body);
         return res.status(201).json({
             success: true,
             message: 'Student created successfully.',
             data: serializeStudent(student),
         });
-    }
-    catch (error) {
+    } catch (error) {
         next(error);
     }
 }

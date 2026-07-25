@@ -28,10 +28,6 @@ export async function createCourse(req, res, next) {
     try {
         const { code, title, credit_hours, creditHours, semester, status = 'ACTIVE', department_id, departmentId, teacher_id, teacherId } = req.body;
 
-        if (!title) {
-            return res.status(400).json({ success: false, message: 'Course title is required.' });
-        }
-
         if (code) {
             const existing = await courseDelegate().findUnique({ where: { code } });
             if (existing) {

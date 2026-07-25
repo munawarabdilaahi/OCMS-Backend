@@ -1,10 +1,6 @@
 import prisma from '../config/db.js';
-import { isAllowedStatus } from '../utils/validation.js';
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
 
-const ALLOWED_EXAM_STATUSES = ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
-const ALLOWED_RESULT_STATUSES = ['DRAFT', 'PUBLISHED', 'REVIEWED'];
-const ALLOWED_COURSE_EXAM_STATUSES = ['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED'];
 const MAX_SCORE = 100;
 
 const examScheduleDelegate = () => prisma.examSchedule;
@@ -37,20 +33,7 @@ export async function createExamSchedule(req, res, next) {
     try {
         const { course_id, courseId, title, exam_type, examType, exam_date, examDate, start_time, startTime, end_time, endTime, room, status } = req.body;
 
-        if (!(course_id || courseId) || !title || !(exam_date || examDate)) {
-            return res.status(400).json({
-                success: false,
-                message: 'course_id, title, and exam_date are required.',
-            });
-        }
-
         const resolvedStatus = status || 'SCHEDULED';
-        if (!isAllowedStatus(resolvedStatus, ALLOWED_EXAM_STATUSES)) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid status. Allowed values: ${ALLOWED_EXAM_STATUSES.join(', ')}`,
-            });
-        }
 
         const schedule = await examScheduleDelegate().create({
             data: {
@@ -111,13 +94,6 @@ export async function updateExamSchedule(req, res, next) {
 
         const { course_id, courseId, title, exam_type, examType, exam_date, examDate, start_time, startTime, end_time, endTime, room, status } = req.body;
 
-        if (status && !isAllowedStatus(status, ALLOWED_EXAM_STATUSES)) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid status. Allowed values: ${ALLOWED_EXAM_STATUSES.join(', ')}`,
-            });
-        }
-
         const schedule = await examScheduleDelegate().update({
             where: { id: scheduleId },
             data: {
@@ -155,10 +131,6 @@ export async function submitExamResult(req, res, next) {
     try {
         const { exam_schedule_id, examScheduleId, student_id, studentId, course_id, courseId, midterm_score, midtermScore, final_score, finalScore, activity_score, activityScore, remarks, status } = req.body;
 
-        if (!(student_id || studentId) || !(course_id || courseId)) {
-            return res.status(400).json({ success: false, message: 'student_id and course_id are required.' });
-        }
-
         const midterm = toDecimal(midterm_score ?? midtermScore) || 0;
         const final = toDecimal(final_score ?? finalScore) || 0;
         const activity = toDecimal(activity_score ?? activityScore) || 0;
@@ -178,12 +150,6 @@ export async function submitExamResult(req, res, next) {
         }
 
         const resolvedStatus = status || 'PUBLISHED';
-        if (!isAllowedStatus(resolvedStatus, ALLOWED_RESULT_STATUSES)) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid status. Allowed values: ${ALLOWED_RESULT_STATUSES.join(', ')}`,
-            });
-        }
 
         const total = midterm + final + activity;
         const result = await examResultDelegate().create({
@@ -253,17 +219,7 @@ export async function createCourseExam(req, res, next) {
     try {
         const { course_id, courseId, title, instructions, duration_minutes, durationMinutes, questions, status } = req.body;
 
-        if (!(course_id || courseId) || !title || !questions) {
-            return res.status(400).json({ success: false, message: 'course_id, title, and questions are required.' });
-        }
-
         const resolvedStatus = status || 'DRAFT';
-        if (!isAllowedStatus(resolvedStatus, ALLOWED_COURSE_EXAM_STATUSES)) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid status. Allowed values: ${ALLOWED_COURSE_EXAM_STATUSES.join(', ')}`,
-            });
-        }
 
         const courseExam = await courseExamDelegate().create({
             data: {

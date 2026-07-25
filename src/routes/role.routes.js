@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { validate } from '../middlewares/validate.middleware.js';
+import { createRoleSchema } from '../validators/role.validator.js';
 import prisma from '../config/db.js';
 
 const router = Router();
@@ -25,11 +27,9 @@ router.get('/:id', authorize('Admin', 'SuperAdmin'), async (req, res, next) => {
     }
 });
 
-router.post('/', authorize('Admin', 'SuperAdmin'), async (req, res, next) => {
+router.post('/', authorize('Admin', 'SuperAdmin'), validate(createRoleSchema), async (req, res, next) => {
     try {
         const { name, permissions } = req.body;
-        if (!name) return res.status(400).json({ success: false, message: 'Role name is required.' });
-
         const existing = await prisma.role.findFirst({ where: { name } });
         if (existing) return res.status(409).json({ success: false, message: 'A role with this name already exists.' });
 

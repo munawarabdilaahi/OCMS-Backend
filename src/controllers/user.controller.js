@@ -67,23 +67,12 @@ export async function createUser(req, res, next) {
     try {
         const { name, email, password, phone, role_id, roleId, status = 'ACTIVE' } = req.body;
 
-        if (!name || !email || !password) {
-            return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
-        }
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return res.status(400).json({ success: false, message: 'Invalid email format.' });
-        }
-
         const existing = await userDelegate().findUnique({ where: { email } });
         if (existing) {
             return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
         }
 
         const resolvedRoleId = role_id || roleId;
-        if (!resolvedRoleId) {
-            return res.status(400).json({ success: false, message: 'role_id is required.' });
-        }
 
         const role = await roleDelegate().findUnique({ where: { id: Number(resolvedRoleId) } });
         if (!role) {

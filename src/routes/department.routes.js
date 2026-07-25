@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { validate } from '../middlewares/validate.middleware.js';
+import { createDepartmentSchema } from '../validators/department.validator.js';
 import prisma from '../config/db.js';
 
 const router = Router();
@@ -43,12 +45,9 @@ router.get('/:id', authorize('Admin', 'SuperAdmin', 'Teacher'), async (req, res,
     }
 });
 
-router.post('/', authorize('Admin', 'SuperAdmin'), async (req, res, next) => {
+router.post('/', authorize('Admin', 'SuperAdmin'), validate(createDepartmentSchema), async (req, res, next) => {
     try {
         const { name, code } = req.body;
-        if (!name) {
-            return res.status(400).json({ success: false, message: 'Department name is required.' });
-        }
         const existing = await prisma.department.findFirst({ where: { name } });
         if (existing) {
             return res.status(409).json({ success: false, message: 'A department with this name already exists.' });
