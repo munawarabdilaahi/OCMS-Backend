@@ -1,0 +1,22 @@
+import { z } from 'zod';
+import { emailSchema } from '../middlewares/validate.middleware.js';
+
+export const ALLOWED_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
+
+export const createTeacherSchema = z.object({
+    name: z.string().min(1, 'Name, email, and password are required.'),
+    email: emailSchema('Invalid email format.'),
+    password: z.string().min(1, 'Name, email, and password are required.'),
+    department_id: z.union([z.string(), z.number()]).optional(),
+    departmentId: z.union([z.string(), z.number()]).optional(),
+    gender: z.string().optional(),
+    employee_no: z.string().optional(),
+    employeeNo: z.string().optional(),
+    position: z.string().optional(),
+    qualification: z.string().optional(),
+    address: z.string().optional(),
+    phone: z.string().optional(),
+}).refine(data => {
+    if (!data.gender) return true;
+    return ALLOWED_GENDERS.includes(data.gender.toUpperCase());
+}, { message: 'Invalid gender. Allowed values: MALE, FEMALE, OTHER', path: ['gender'] });
