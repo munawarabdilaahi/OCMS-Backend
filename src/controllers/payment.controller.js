@@ -1,9 +1,10 @@
+import { buildPaginationMeta } from '../utils/pagination.js';
 import { serializePayment, createPayment as createPaymentService, listPayments as listPaymentsService, getPaymentById as getPaymentByIdService, getPaymentStats as getPaymentStatsService } from '../services/payment.service.js';
 
 export async function createPayment(req, res, next) {
     try {
         const payment = await createPaymentService(req.body, req.user?.id);
-        return res.status(201).json({ success: true, message: 'Payment recorded.', data: serializePayment(payment) });
+        return res.status(201).json({ success: true, message: 'Payment created successfully.', data: serializePayment(payment) });
     } catch (error) {
         next(error);
     }
@@ -15,7 +16,7 @@ export async function listPayments(req, res, next) {
         return res.status(200).json({
             success: true,
             data: payments.map(serializePayment),
-            meta: { total, page, pageSize: limit, pageCount: Math.ceil(total / limit) },
+            meta: buildPaginationMeta(page, limit, total),
         });
     } catch (error) {
         next(error);

@@ -4,7 +4,7 @@ import { serializeAttendance, createAttendance as createAttendanceService, getAt
 export async function createAttendance(req, res, next) {
     try {
         const record = await createAttendanceService(req.body);
-        return res.status(201).json({ success: true, message: 'Attendance recorded successfully.', data: serializeAttendance(record) });
+        return res.status(201).json({ success: true, message: 'Attendance created successfully.', data: serializeAttendance(record) });
     } catch (error) {
         next(error);
     }

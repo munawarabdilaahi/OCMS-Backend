@@ -202,6 +202,7 @@ model ExamResult {
   @@index([exam_schedule_id])
   @@index([student_id])
   @@index([course_id])
+  @@unique([student_id, course_id, exam_schedule_id])
 }
 
 model CourseExam {
