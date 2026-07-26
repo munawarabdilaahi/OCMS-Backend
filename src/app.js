@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
 import authRoutes from './routes/auth.routes.js';
 import studentRoutes from './routes/student.routes.js';
 import teacherRoutes from './routes/teacher.routes.js';
@@ -65,6 +67,11 @@ export function createApp() {
         credentials: true,
         maxAge: 86400,
     }));
+
+    app.use('/api-docs', (req, res, next) => {
+        res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'");
+        next();
+    }, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
     app.use(globalLimiter);
     app.use(express.json({ limit: '1mb' }));
