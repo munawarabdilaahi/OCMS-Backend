@@ -3,7 +3,7 @@ import { createExamSchedule as createExamScheduleService, getCourseExamById as g
 
 export async function createExamSchedule(req, res, next) {
     try {
-        const schedule = await createExamScheduleService(req.body);
+        const schedule = await createExamScheduleService(req.body, req.user);
         return res.status(201).json({ success: true, message: 'Exam schedule created successfully.', data: schedule });
     } catch (error) {
         next(error);
@@ -12,7 +12,7 @@ export async function createExamSchedule(req, res, next) {
 
 export async function getExamSchedules(req, res, next) {
     try {
-        const { schedules, total, page, limit } = await getExamSchedulesService(req.query);
+        const { schedules, total, page, limit } = await getExamSchedulesService(req.query, req.user);
         return res.status(200).json({
             success: true,
             message: 'Exam schedules retrieved successfully.',
@@ -26,7 +26,7 @@ export async function getExamSchedules(req, res, next) {
 
 export async function updateExamSchedule(req, res, next) {
     try {
-        const schedule = await updateExamScheduleService(req.params.id, req.body);
+        const schedule = await updateExamScheduleService(req.params.id, req.body, req.user);
         return res.status(200).json({ success: true, message: 'Exam schedule updated successfully.', data: schedule });
     } catch (error) {
         next(error);
@@ -35,7 +35,7 @@ export async function updateExamSchedule(req, res, next) {
 
 export async function deleteExamSchedule(req, res, next) {
     try {
-        await deleteExamScheduleService(req.params.id);
+        await deleteExamScheduleService(req.params.id, req.user);
         return res.status(200).json({ success: true, message: 'Exam schedule cancelled successfully.' });
     } catch (error) {
         next(error);
@@ -44,7 +44,7 @@ export async function deleteExamSchedule(req, res, next) {
 
 export async function submitExamResult(req, res, next) {
     try {
-        const result = await submitExamResultService(req.body);
+        const result = await submitExamResultService(req.body, req.user);
         return res.status(201).json({ success: true, message: 'Exam result submitted successfully.', data: result });
     } catch (error) {
         next(error);
@@ -67,7 +67,7 @@ export async function getExamResults(req, res, next) {
 
 export async function createCourseExam(req, res, next) {
     try {
-        const courseExam = await createCourseExamService(req.body);
+        const courseExam = await createCourseExamService(req.body, req.user);
         return res.status(201).json({ success: true, message: 'Course exam created successfully.', data: courseExam });
     } catch (error) {
         next(error);
@@ -76,7 +76,7 @@ export async function createCourseExam(req, res, next) {
 
 export async function getCourseExams(req, res, next) {
     try {
-        const { courseExams, total, page, limit } = await getCourseExamsService(req.query);
+        const { courseExams, total, page, limit } = await getCourseExamsService(req.query, req.user);
         return res.status(200).json({
             success: true,
             message: 'Course exams retrieved successfully.',
@@ -90,7 +90,7 @@ export async function getCourseExams(req, res, next) {
 
 export async function getCourseExamById(req, res, next) {
     try {
-        const courseExam = await getCourseExamByIdService(req.params.id);
+        const courseExam = await getCourseExamByIdService(req.params.id, req.user);
         if (!courseExam) {
             return res.status(404).json({ success: false, message: 'Course exam not found.' });
         }

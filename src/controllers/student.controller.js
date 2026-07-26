@@ -24,7 +24,7 @@ export async function getStats(req, res, next) {
 }
 export async function getStudents(req, res, next) {
     try {
-        const { students, total, page, limit } = await getStudentsService(req.query);
+        const { students, total, page, limit } = await getStudentsService(req.query, req.user);
         return res.status(200).json({
             success: true,
             message: 'Students retrieved successfully.',

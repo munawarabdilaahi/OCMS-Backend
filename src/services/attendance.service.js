@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { getPaginationParams } from '../utils/pagination.js';
+import { getTeacherInfo, getTeacherCourseIds } from '../utils/rbac.js';
 
 const attendanceDelegate = () => prisma.attendance;
 
@@ -25,12 +26,20 @@ export function serializeAttendance(record) {
     };
 }
 
-export async function createAttendance(data) {
+export async function createAttendance(data, user) {
     const { student_id, studentId, course_id, courseId, date, status, remarks, teacher_id, teacherId } = data;
+    const resolvedCourseId = Number(course_id || courseId);
     const resolvedStatus = String(status).toUpperCase();
 
+    const teacherInfo = await getTeacherInfo(user);
+    if (teacherInfo !== null && !teacherInfo.courseIds.includes(resolvedCourseId)) {
+        const error = new Error('Access denied. You can only manage attendance for your assigned courses.');
+        error.statusCode = 403;
+        throw error;
+    }
+
     const existing = await attendanceDelegate().findUnique({
-        where: { student_id_course_id_date: { student_id: Number(student_id || studentId), course_id: Number(course_id || courseId), date: new Date(date) } },
+        where: { student_id_course_id_date: { student_id: Number(student_id || studentId), course_id: resolvedCourseId, date: new Date(date) } },
     });
     if (existing) {
         const error = new Error('Attendance record already exists for this student, course, and date.');
@@ -41,8 +50,8 @@ export async function createAttendance(data) {
     return attendanceDelegate().create({
         data: {
             student_id: Number(student_id || studentId),
-            course_id: Number(course_id || courseId),
-            teacher_id: teacher_id || teacherId ? Number(teacher_id || teacherId) : null,
+            course_id: resolvedCourseId,
+            teacher_id: teacherInfo && teacherInfo.teacherId ? teacherInfo.teacherId : (teacher_id || teacherId ? Number(teacher_id || teacherId) : null),
             date: new Date(date),
             status: resolvedStatus,
             remarks,
@@ -78,6 +87,21 @@ export async function getAttendance(query, user) {
     };
     if (user.roleName === 'Student') {
         where.student = { user_id: user.id };
+    } else if (user.roleName === 'Teacher') {
+        const teacherInfo = await getTeacherInfo(user);
+        if (teacherInfo === null || teacherInfo.courseIds.length === 0) {
+            return { records: [], total: 0, page, limit };
+        }
+        if (course_id) {
+            if (!teacherInfo.courseIds.includes(course_id)) {
+                return { records: [], total: 0, page, limit };
+            }
+        } else {
+            where.course_id = { in: teacherInfo.courseIds };
+        }
+        if (student_id) {
+            where.student_id = student_id;
+        }
     } else if (student_id) {
         where.student_id = student_id;
     }
@@ -93,8 +117,25 @@ export async function getAttendance(query, user) {
 export async function getAttendanceStats(query, user) {
     const where = {};
     if (query.course_id) where.course_id = Number(query.course_id);
-    if (query.student_id && user.roleName !== 'Student') where.student_id = Number(query.student_id);
-    if (user.roleName === 'Student') where.student = { user_id: user.id };
+    if (query.student_id && user.roleName !== 'Student' && user.roleName !== 'Teacher') where.student_id = Number(query.student_id);
+    if (user.roleName === 'Student') {
+        where.student = { user_id: user.id };
+    } else if (user.roleName === 'Teacher') {
+        const teacherInfo = await getTeacherInfo(user);
+        if (teacherInfo === null || teacherInfo.courseIds.length === 0) {
+            return { total: 0, present: 0, absent: 0, late: 0, rate: 0 };
+        }
+        const queryCourseId = query.course_id ? Number(query.course_id) : undefined;
+        if (queryCourseId) {
+            if (!teacherInfo.courseIds.includes(queryCourseId)) {
+                return { total: 0, present: 0, absent: 0, late: 0, rate: 0 };
+            }
+            where.course_id = queryCourseId;
+        } else {
+            where.course_id = { in: teacherInfo.courseIds };
+        }
+        if (query.student_id) where.student_id = Number(query.student_id);
+    }
 
     const [total, present, absent, late] = await Promise.all([
         attendanceDelegate().count({ where }),
@@ -112,12 +153,19 @@ export async function getAttendanceStats(query, user) {
     };
 }
 
-export async function updateAttendance(id, data) {
+export async function updateAttendance(id, data, user) {
     const recordId = Number(id);
     const existing = await attendanceDelegate().findUnique({ where: { id: recordId } });
     if (!existing) {
         const error = new Error('Attendance record not found.');
         error.statusCode = 404;
+        throw error;
+    }
+
+    const teacherInfo = await getTeacherCourseIds(user);
+    if (teacherInfo !== null && !teacherInfo.courseIds.includes(existing.course_id)) {
+        const error = new Error('Access denied. You can only update attendance for your assigned courses.');
+        error.statusCode = 403;
         throw error;
     }
 
@@ -145,11 +193,19 @@ export async function deleteAttendance(id) {
     return existing;
 }
 
-export async function bulkCreateAttendance(data) {
+export async function bulkCreateAttendance(data, user) {
     const { course_id, courseId, date, records, teacher_id, teacherId } = data;
 
     const resolvedCourseId = Number(course_id || courseId);
     const resolvedDate = new Date(date);
+
+    const teacherInfo = await getTeacherCourseIds(user);
+    if (teacherInfo !== null && !teacherInfo.courseIds.includes(resolvedCourseId)) {
+        const error = new Error('Access denied. You can only manage attendance for your assigned courses.');
+        error.statusCode = 403;
+        throw error;
+    }
+
     const results = [];
 
     for (const record of records) {

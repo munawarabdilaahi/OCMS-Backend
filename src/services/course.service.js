@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { getPaginationParams } from '../utils/pagination.js';
+import { getTeacherInfo } from '../utils/rbac.js';
 
 const courseDelegate = () => prisma.course;
 
@@ -50,7 +51,7 @@ export async function createCourse(data) {
     });
 }
 
-export async function getCourses(query) {
+export async function getCourses(query, user) {
     const { page, limit, skip } = getPaginationParams(query);
     const search = query.search?.trim();
     const status = query.status?.trim();
@@ -70,6 +71,11 @@ export async function getCourses(query) {
             : {}),
     };
 
+    const teacherInfo = await getTeacherInfo(user);
+    if (teacherInfo !== null && teacherInfo.teacherId !== null) {
+        where.teacher_id = teacherInfo.teacherId;
+    }
+
     const [courses, total] = await Promise.all([
         courseDelegate().findMany({ where, include: courseInclude, skip, take: limit, orderBy: { created_at: 'desc' } }),
         courseDelegate().count({ where }),
@@ -78,11 +84,17 @@ export async function getCourses(query) {
     return { courses, total, page, limit };
 }
 
-export async function getCourseById(id) {
-    return courseDelegate().findUnique({
+export async function getCourseById(id, user) {
+    const course = await courseDelegate().findUnique({
         where: { id: Number(id) },
         include: courseInclude,
     });
+    if (!course) return null;
+    if (user && user.roleName === 'Teacher') {
+        const teacherInfo = await getTeacherInfo(user);
+        if (teacherInfo !== null && teacherInfo.teacherId !== null && course.teacher_id !== teacherInfo.teacherId) return null;
+    }
+    return course;
 }
 
 export async function updateCourse(id, data) {

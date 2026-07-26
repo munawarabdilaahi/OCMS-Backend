@@ -9,10 +9,10 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/stats', authorize('Admin', 'SuperAdmin', 'Teacher'), getStats);
-router.post('/', authorize('Admin', 'SuperAdmin', 'Teacher'), validate(createStudentSchema), createStudent);
+router.post('/', authorize('Admin', 'SuperAdmin'), validate(createStudentSchema), createStudent);
 router.get('/', authorize('Admin', 'SuperAdmin', 'Teacher'), getStudents);
 router.get('/:id', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), getStudentById);
-router.put('/:id', authorize('Admin', 'SuperAdmin', 'Teacher'), validate(updateStudentSchema), updateStudent);
+router.put('/:id', authorize('Admin', 'SuperAdmin'), validate(updateStudentSchema), updateStudent);
 router.patch('/:id/status', authorize('Admin', 'SuperAdmin'), validate(updateStudentStatusSchema), updateStudentStatus);
 router.delete('/:id', authorize('Admin', 'SuperAdmin'), deleteStudent);
 

@@ -12,7 +12,7 @@ export async function createCourse(req, res, next) {
 
 export async function getCourses(req, res, next) {
     try {
-        const { courses, total, page, limit } = await getCoursesService(req.query);
+        const { courses, total, page, limit } = await getCoursesService(req.query, req.user);
         return res.status(200).json({
             success: true,
             message: 'Courses retrieved successfully.',
@@ -26,7 +26,7 @@ export async function getCourses(req, res, next) {
 
 export async function getCourseById(req, res, next) {
     try {
-        const course = await getCourseByIdService(req.params.id);
+        const course = await getCourseByIdService(req.params.id, req.user);
         if (!course) {
             return res.status(404).json({ success: false, message: 'Course not found.' });
         }

@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { hashPassword } from '../utils/password.js';
 import { getPaginationParams } from '../utils/pagination.js';
+import { getTeacherCourseIds } from '../utils/rbac.js';
 
 async function getStudentRoleId() {
     const role = await prisma.role.findFirst({ where: { name: 'Student' } });
@@ -77,14 +78,25 @@ const studentDetailInclude = {
 };
 
 export async function getStudentById(id, user) {
-    const isStudentRole = user.roleName === 'Student';
-    return prisma.student.findUnique({
-        where: isStudentRole ? { user_id: user.id } : { id: Number(id) },
+    const student = await prisma.student.findUnique({
+        where: user.roleName === 'Student' ? { user_id: user.id } : { id: Number(id) },
         include: studentDetailInclude,
     });
+    if (!student) return null;
+    if (user.roleName === 'Teacher') {
+        const courseIds = await getTeacherCourseIds(user);
+        if (courseIds.length === 0) return null;
+        const hasRelation = await prisma.attendance.findFirst({
+            where: { student_id: student.id, course_id: { in: courseIds } },
+        }) || await prisma.examResult.findFirst({
+            where: { student_id: student.id, course_id: { in: courseIds } },
+        });
+        if (!hasRelation) return null;
+    }
+    return student;
 }
 
-export async function getStudents(query) {
+export async function getStudents(query, user) {
     const { page, limit, skip } = getPaginationParams(query);
     const search = query.search?.trim();
     const status = query.status?.trim();
@@ -102,6 +114,31 @@ export async function getStudents(query) {
             }
             : {}),
     };
+
+    const courseIds = await getTeacherCourseIds(user);
+    if (courseIds !== null) {
+        if (courseIds.length === 0) {
+            return { students: [], total: 0, page, limit };
+        }
+        const studentIds = await prisma.attendance.findMany({
+            where: { course_id: { in: courseIds } },
+            select: { student_id: true },
+            distinct: ['student_id'],
+        });
+        const resultStudentIds = await prisma.examResult.findMany({
+            where: { course_id: { in: courseIds } },
+            select: { student_id: true },
+            distinct: ['student_id'],
+        });
+        const ids = new Set([
+            ...studentIds.map((r) => r.student_id),
+            ...resultStudentIds.map((r) => r.student_id),
+        ]);
+        if (ids.size === 0) {
+            return { students: [], total: 0, page, limit };
+        }
+        where.id = { in: [...ids] };
+    }
 
     const [students, total] = await Promise.all([
         prisma.student.findMany({

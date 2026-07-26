@@ -30,7 +30,7 @@ router.get('/me', authenticate, getMe);
 router.post('/logout', authenticate, logout);
 
 router.post('/verify-email/generate', authenticate, generateEmailVerification);
-router.post('/verify-email', validate(verifyEmailSchema), verifyEmail);
+router.post('/verify-email', authLimiter, validate(verifyEmailSchema), verifyEmail);
 
 router.get('/sessions', authenticate, getSessions);
 router.delete('/sessions/:sessionId', authenticate, revokeSession);

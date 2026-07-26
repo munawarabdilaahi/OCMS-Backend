@@ -3,7 +3,7 @@ import { serializeAttendance, createAttendance as createAttendanceService, getAt
 
 export async function createAttendance(req, res, next) {
     try {
-        const record = await createAttendanceService(req.body);
+        const record = await createAttendanceService(req.body, req.user);
         return res.status(201).json({ success: true, message: 'Attendance created successfully.', data: serializeAttendance(record) });
     } catch (error) {
         next(error);
@@ -35,7 +35,7 @@ export async function getAttendanceStats(req, res, next) {
 
 export async function updateAttendance(req, res, next) {
     try {
-        const record = await updateAttendanceService(req.params.id, req.body);
+        const record = await updateAttendanceService(req.params.id, req.body, req.user);
         return res.status(200).json({ success: true, message: 'Attendance updated successfully.', data: serializeAttendance(record) });
     } catch (error) {
         next(error);
@@ -53,7 +53,7 @@ export async function deleteAttendance(req, res, next) {
 
 export async function bulkCreateAttendance(req, res, next) {
     try {
-        const { count, results } = await bulkCreateAttendanceService(req.body);
+        const { count, results } = await bulkCreateAttendanceService(req.body, req.user);
         return res.status(201).json({ success: true, message: `${count} attendance record(s) processed.`, data: results });
     } catch (error) {
         next(error);
