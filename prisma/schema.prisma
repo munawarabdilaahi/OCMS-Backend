@@ -7,6 +7,56 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum ExamScheduleStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ExamResultStatus {
+  DRAFT
+  PUBLISHED
+  REVIEWED
+}
+
+enum CourseExamStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  CHEQUE
+  ONLINE
+}
+
+enum CourseStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum FeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
 model Role {
   id          Int      @id @default(autoincrement())
   name        String   @unique
@@ -17,38 +67,38 @@ model Role {
 }
 
 model User {
-  id                Int                    @id @default(autoincrement())
-  name              String
-  email             String                 @unique
-  password          String
-  phone             String?
-  status            String                 @default("ACTIVE")
-  role_id           Int
-  role              Role                   @relation(fields: [role_id], references: [id])
-  student           Student?
-  teacher           Teacher?
-  email_verified    Boolean                @default(false)
+  id                 Int                  @id @default(autoincrement())
+  name               String
+  email              String               @unique
+  password           String
+  phone              String?
+  status             String               @default("ACTIVE")
+  role_id            Int
+  role               Role                 @relation(fields: [role_id], references: [id])
+  student            Student?
+  teacher            Teacher?
+  email_verified     Boolean              @default(false)
   email_verify_token EmailVerifyToken?
-  last_login        DateTime?
-  refresh_tokens    RefreshToken[]
-  password_resets   PasswordResetToken[]
-  sessions          Session[]
-  created_at        DateTime               @default(now())
-  updated_at        DateTime               @updatedAt
+  last_login         DateTime?
+  refresh_tokens     RefreshToken[]
+  password_resets    PasswordResetToken[]
+  sessions           Session[]
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
 
   @@index([role_id])
 }
 
 model Department {
-  id           Int            @id @default(autoincrement())
-  code         String?        @unique
-  name         String
-  students     Student[]
-  teachers     Teacher[]
-  courses      Course[]
+  id             Int            @id @default(autoincrement())
+  code           String?        @unique
+  name           String
+  students       Student[]
+  teachers       Teacher[]
+  courses        Course[]
   fee_structures FeeStructure[]
-  created_at   DateTime       @default(now())
-  updated_at   DateTime       @updatedAt
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
 }
 
 model Student {
@@ -59,7 +109,7 @@ model Student {
   department    Department   @relation(fields: [department_id], references: [id])
   admission_no  String?      @unique
   date_of_birth DateTime?
-  gender        String?
+  gender        Gender?
   address       String?
   status        String       @default("ACTIVE")
   results       ExamResult[]
@@ -72,22 +122,22 @@ model Student {
 }
 
 model Teacher {
-  id              Int       @id @default(autoincrement())
-  user_id         Int       @unique
-  user            User      @relation(fields: [user_id], references: [id])
+  id              Int          @id @default(autoincrement())
+  user_id         Int          @unique
+  user            User         @relation(fields: [user_id], references: [id])
   department_id   Int?
-  department      Department? @relation(fields: [department_id], references: [id])
-  employee_no     String?   @unique
+  department      Department?  @relation(fields: [department_id], references: [id])
+  employee_no     String?      @unique
   position        String?
   qualification   String?
   employment_date DateTime?
-  gender          String?
+  gender          Gender?
   address         String?
-  status          String    @default("ACTIVE")
+  status          String       @default("ACTIVE")
   courses         Course[]
   attendances     Attendance[]
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
 
   @@index([department_id])
 }
@@ -98,7 +148,7 @@ model Course {
   title          String
   credit_hours   Int?
   semester       String?
-  status         String         @default("ACTIVE")
+  status         CourseStatus   @default(ACTIVE)
   department_id  Int?
   department     Department?    @relation(fields: [department_id], references: [id])
   teacher_id     Int?
@@ -115,39 +165,39 @@ model Course {
 }
 
 model ExamSchedule {
-  id           Int          @id @default(autoincrement())
+  id           Int                @id @default(autoincrement())
   course_id    Int
-  course       Course       @relation(fields: [course_id], references: [id])
+  course       Course             @relation(fields: [course_id], references: [id])
   title        String
   exam_type    String?
   exam_date    DateTime
   start_time   String?
   end_time     String?
   room         String?
-  status       String       @default("SCHEDULED")
+  status       ExamScheduleStatus @default(SCHEDULED)
   exam_results ExamResult[]
-  created_at   DateTime     @default(now())
-  updated_at   DateTime     @updatedAt
+  created_at   DateTime           @default(now())
+  updated_at   DateTime           @updatedAt
 
   @@index([course_id])
 }
 
 model ExamResult {
-  id               Int           @id @default(autoincrement())
+  id               Int              @id @default(autoincrement())
   exam_schedule_id Int?
-  exam_schedule    ExamSchedule? @relation(fields: [exam_schedule_id], references: [id])
+  exam_schedule    ExamSchedule?    @relation(fields: [exam_schedule_id], references: [id])
   student_id       Int
-  student          Student       @relation(fields: [student_id], references: [id])
+  student          Student          @relation(fields: [student_id], references: [id])
   course_id        Int
-  course           Course        @relation(fields: [course_id], references: [id])
-  midterm_score    Decimal       @default(0)
-  final_score      Decimal       @default(0)
-  activity_score   Decimal       @default(0)
-  total_score      Decimal       @default(0)
+  course           Course           @relation(fields: [course_id], references: [id])
+  midterm_score    Decimal          @default(0)
+  final_score      Decimal          @default(0)
+  activity_score   Decimal          @default(0)
+  total_score      Decimal          @default(0)
   remarks          String?
-  status           String        @default("PUBLISHED")
-  created_at       DateTime      @default(now())
-  updated_at       DateTime      @updatedAt
+  status           ExamResultStatus @default(PUBLISHED)
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
 
   @@index([exam_schedule_id])
   @@index([student_id])
@@ -155,120 +205,120 @@ model ExamResult {
 }
 
 model CourseExam {
-  id               Int      @id @default(autoincrement())
+  id               Int              @id @default(autoincrement())
   course_id        Int
-  course           Course   @relation(fields: [course_id], references: [id])
+  course           Course           @relation(fields: [course_id], references: [id])
   title            String
   instructions     String?
   duration_minutes Int?
   questions        Json
-  status           String   @default("DRAFT")
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  status           CourseExamStatus @default(DRAFT)
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
 
   @@index([course_id])
 }
 
 model Attendance {
-  id           Int      @id @default(autoincrement())
-  student_id   Int
-  student      Student  @relation(fields: [student_id], references: [id])
-  course_id    Int
-  course       Course   @relation(fields: [course_id], references: [id])
-  teacher_id   Int?
-  teacher      Teacher? @relation(fields: [teacher_id], references: [id])
-  date         DateTime
-  status       String
-  remarks      String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id         Int              @id @default(autoincrement())
+  student_id Int
+  student    Student          @relation(fields: [student_id], references: [id])
+  course_id  Int
+  course     Course           @relation(fields: [course_id], references: [id])
+  teacher_id Int?
+  teacher    Teacher?         @relation(fields: [teacher_id], references: [id])
+  date       DateTime
+  status     AttendanceStatus
+  remarks    String?
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
 
   @@unique([student_id, course_id, date])
   @@index([teacher_id])
 }
 
 model FeeStructure {
-  id             Int       @id @default(autoincrement())
-  name           String
-  description    String?
-  amount         Decimal
-  department_id  Int?
-  department     Department? @relation(fields: [department_id], references: [id])
-  academic_year  String
-  semester       String?
-  status         String    @default("ACTIVE")
-  invoices       Invoice[]
-  created_at     DateTime  @default(now())
-  updated_at     DateTime  @updatedAt
+  id            Int         @id @default(autoincrement())
+  name          String
+  description   String?
+  amount        Decimal
+  department_id Int?
+  department    Department? @relation(fields: [department_id], references: [id])
+  academic_year String
+  semester      String?
+  status        FeeStatus   @default(ACTIVE)
+  invoices      Invoice[]
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
 
   @@index([department_id])
 }
 
 model Invoice {
-  id               Int       @id @default(autoincrement())
-  invoice_number   String    @unique
+  id               Int           @id @default(autoincrement())
+  invoice_number   String        @unique
   student_id       Int
-  student          Student   @relation(fields: [student_id], references: [id])
+  student          Student       @relation(fields: [student_id], references: [id])
   fee_structure_id Int?
   fee_structure    FeeStructure? @relation(fields: [fee_structure_id], references: [id])
   amount           Decimal
-  paid_amount      Decimal   @default(0)
+  paid_amount      Decimal       @default(0)
   balance          Decimal
-  status           String    @default("Pending")
+  status           String        @default("Pending")
   due_date         DateTime
   academic_year    String?
   semester         String?
   notes            String?
   payments         Payment[]
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
 
   @@index([student_id])
   @@index([fee_structure_id])
 }
 
 model Payment {
-  id               Int       @id @default(autoincrement())
+  id               Int           @id @default(autoincrement())
   invoice_id       Int
-  invoice          Invoice   @relation(fields: [invoice_id], references: [id])
+  invoice          Invoice       @relation(fields: [invoice_id], references: [id])
   amount           Decimal
-  payment_method   String
+  payment_method   PaymentMethod
   reference_number String?
-  status           String    @default("Completed")
+  status           String        @default("Completed")
   notes            String?
   recorded_by      Int?
   transactions     Transaction[]
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
 
   @@index([invoice_id])
 }
 
 model Transaction {
-  id         Int      @id @default(autoincrement())
-  payment_id Int
-  payment    Payment  @relation(fields: [payment_id], references: [id])
-  type       String
-  amount     Decimal
+  id          Int      @id @default(autoincrement())
+  payment_id  Int
+  payment     Payment  @relation(fields: [payment_id], references: [id])
+  type        String
+  amount      Decimal
   description String?
-  reference  String?
-  created_at DateTime @default(now())
+  reference   String?
+  created_at  DateTime @default(now())
 
   @@index([payment_id])
 }
 
 model RefreshToken {
-  id           Int      @id @default(autoincrement())
-  token        String   @unique
-  user_id      Int
-  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  session_id   Int?
-  session      Session? @relation(fields: [session_id], references: [id], onDelete: SetNull)
-  user_agent   String?
-  ip_address   String?
-  expires_at   DateTime
-  revoked_at   DateTime?
-  created_at   DateTime @default(now())
+  id         Int       @id @default(autoincrement())
+  token      String    @unique
+  user_id    Int
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  session_id Int?
+  session    Session?  @relation(fields: [session_id], references: [id], onDelete: SetNull)
+  user_agent String?
+  ip_address String?
+  expires_at DateTime
+  revoked_at DateTime?
+  created_at DateTime  @default(now())
 
   @@index([token])
   @@index([user_id])
@@ -276,41 +326,41 @@ model RefreshToken {
 }
 
 model PasswordResetToken {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   user_id    Int
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  token_hash String   @unique
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token_hash String    @unique
   expires_at DateTime
   used_at    DateTime?
-  created_at DateTime @default(now())
+  created_at DateTime  @default(now())
 
   @@index([token_hash])
   @@index([user_id])
 }
 
 model EmailVerifyToken {
-  id         Int      @id @default(autoincrement())
-  user_id    Int      @unique
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  token_hash String   @unique
-  expires_at DateTime
+  id          Int       @id @default(autoincrement())
+  user_id     Int       @unique
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token_hash  String    @unique
+  expires_at  DateTime
   verified_at DateTime?
-  created_at DateTime @default(now())
+  created_at  DateTime  @default(now())
 
   @@index([token_hash])
 }
 
 model Session {
-  id              Int           @id @default(autoincrement())
-  user_id         Int
-  user            User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  refresh_tokens  RefreshToken[]
-  user_agent      String?
-  ip_address      String?
-  last_active     DateTime      @default(now())
-  expires_at      DateTime
-  revoked_at      DateTime?
-  created_at      DateTime      @default(now())
+  id             Int            @id @default(autoincrement())
+  user_id        Int
+  user           User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  refresh_tokens RefreshToken[]
+  user_agent     String?
+  ip_address     String?
+  last_active    DateTime       @default(now())
+  expires_at     DateTime
+  revoked_at     DateTime?
+  created_at     DateTime       @default(now())
 
   @@index([user_id])
 }

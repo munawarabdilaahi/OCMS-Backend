@@ -9,7 +9,7 @@ export const createStudentSchema = z.object({
     password: z.string().min(1, 'Name, email, password, and department_id are required.'),
     department_id: z.union([z.string(), z.number()]).optional(),
     departmentId: z.union([z.string(), z.number()]).optional(),
-    gender: z.string().optional(),
+    gender: z.string().optional().transform(val => val ? val.toUpperCase() : val),
     date_of_birth: z.string().optional(),
     dateOfBirth: z.string().optional(),
     address: z.string().optional(),

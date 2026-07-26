@@ -9,8 +9,8 @@ export const createPaymentSchema = z.object({
         const num = Number(val);
         return !isNaN(num) && num > 0;
     }, 'Amount must be a positive number.'),
-    payment_method: z.string().min(1, 'invoice_id, amount, and payment_method are required.').refine(
-        val => ALLOWED_PAYMENT_METHODS.includes(val.toUpperCase()),
+    payment_method: z.string().min(1, 'invoice_id, amount, and payment_method are required.').transform(val => val.toUpperCase()).refine(
+        val => ALLOWED_PAYMENT_METHODS.includes(val),
         `Invalid payment_method. Allowed values: ${ALLOWED_PAYMENT_METHODS.join(', ')}`
     ),
     paymentMethod: z.string().optional(),

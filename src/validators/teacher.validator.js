@@ -9,7 +9,7 @@ export const createTeacherSchema = z.object({
     password: z.string().min(1, 'Name, email, and password are required.'),
     department_id: z.union([z.string(), z.number()]).optional(),
     departmentId: z.union([z.string(), z.number()]).optional(),
-    gender: z.string().optional(),
+    gender: z.string().optional().transform(val => val ? val.toUpperCase() : val),
     employee_no: z.string().optional(),
     employeeNo: z.string().optional(),
     position: z.string().optional(),

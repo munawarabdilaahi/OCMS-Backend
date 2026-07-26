@@ -15,8 +15,8 @@ export const createExamScheduleSchema = z.object({
     end_time: z.string().optional(),
     endTime: z.string().optional(),
     room: z.string().optional(),
-    status: z.string().refine(
-        val => ALLOWED_EXAM_STATUSES.includes(val.toUpperCase()),
+    status: z.string().transform(val => val.toUpperCase()).refine(
+        val => ALLOWED_EXAM_STATUSES.includes(val),
         `Invalid status. Allowed values: ${ALLOWED_EXAM_STATUSES.join(', ')}`
     ).optional(),
 }).refine(data => data.course_id || data.courseId, {
@@ -41,8 +41,8 @@ export const submitExamResultSchema = z.object({
     activity_score: z.union([z.string(), z.number()]).optional(),
     activityScore: z.union([z.string(), z.number()]).optional(),
     remarks: z.string().optional(),
-    status: z.string().refine(
-        val => ALLOWED_RESULT_STATUSES.includes(val.toUpperCase()),
+    status: z.string().transform(val => val.toUpperCase()).refine(
+        val => ALLOWED_RESULT_STATUSES.includes(val),
         `Invalid status. Allowed values: ${ALLOWED_RESULT_STATUSES.join(', ')}`
     ).optional(),
 }).refine(data => data.student_id || data.studentId, {
@@ -61,8 +61,8 @@ export const createCourseExamSchema = z.object({
     duration_minutes: z.union([z.string(), z.number()]).optional(),
     durationMinutes: z.union([z.string(), z.number()]).optional(),
     questions: z.any(),
-    status: z.string().refine(
-        val => ALLOWED_COURSE_EXAM_STATUSES.includes(val.toUpperCase()),
+    status: z.string().transform(val => val.toUpperCase()).refine(
+        val => ALLOWED_COURSE_EXAM_STATUSES.includes(val),
         `Invalid status. Allowed values: ${ALLOWED_COURSE_EXAM_STATUSES.join(', ')}`
     ).optional(),
 }).refine(data => data.course_id || data.courseId, {
@@ -83,8 +83,8 @@ export const updateExamScheduleSchema = z.object({
     end_time: z.string().optional(),
     endTime: z.string().optional(),
     room: z.string().optional(),
-    status: z.string().refine(
-        val => ALLOWED_EXAM_STATUSES.includes(val.toUpperCase()),
+    status: z.string().transform(val => val.toUpperCase()).refine(
+        val => ALLOWED_EXAM_STATUSES.includes(val),
         `Invalid status. Allowed values: ${ALLOWED_EXAM_STATUSES.join(', ')}`
     ).optional(),
 });
