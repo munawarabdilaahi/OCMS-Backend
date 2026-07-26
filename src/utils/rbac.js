@@ -30,10 +30,8 @@ export async function canTeacherAccessStudent(user, studentId) {
     if (!user || user.roleName !== 'Teacher') return true;
     const courseIds = await getTeacherCourseIds(user);
     if (courseIds === null || courseIds.length === 0) return false;
-    const hasRelation = await prisma.attendance.findFirst({
-        where: { student_id: Number(studentId), course_id: { in: courseIds } },
-    }) || await prisma.examResult.findFirst({
+    const enrollment = await prisma.enrollment.findFirst({
         where: { student_id: Number(studentId), course_id: { in: courseIds } },
     });
-    return !!hasRelation;
+    return !!enrollment;
 }

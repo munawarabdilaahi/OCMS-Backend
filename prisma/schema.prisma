@@ -114,6 +114,7 @@ model Student {
   status        String       @default("ACTIVE")
   results       ExamResult[]
   attendances   Attendance[]
+  enrollments   Enrollment[]
   invoices      Invoice[]
   created_at    DateTime     @default(now())
   updated_at    DateTime     @updatedAt
@@ -157,6 +158,7 @@ model Course {
   exam_schedules ExamSchedule[]
   exam_results   ExamResult[]
   course_exams   CourseExam[]
+  enrollments    Enrollment[]
   created_at     DateTime       @default(now())
   updated_at     DateTime       @updatedAt
 
@@ -236,6 +238,21 @@ model Attendance {
 
   @@unique([student_id, course_id, date])
   @@index([teacher_id])
+}
+
+model Enrollment {
+  id         Int      @id @default(autoincrement())
+  student_id Int
+  student    Student  @relation(fields: [student_id], references: [id])
+  course_id  Int
+  course     Course   @relation(fields: [course_id], references: [id])
+  status     String   @default("ACTIVE")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([student_id, course_id])
+  @@index([student_id])
+  @@index([course_id])
 }
 
 model FeeStructure {

@@ -86,12 +86,10 @@ export async function getStudentById(id, user) {
     if (user.roleName === 'Teacher') {
         const courseIds = await getTeacherCourseIds(user);
         if (courseIds.length === 0) return null;
-        const hasRelation = await prisma.attendance.findFirst({
-            where: { student_id: student.id, course_id: { in: courseIds } },
-        }) || await prisma.examResult.findFirst({
+        const enrollment = await prisma.enrollment.findFirst({
             where: { student_id: student.id, course_id: { in: courseIds } },
         });
-        if (!hasRelation) return null;
+        if (!enrollment) return null;
     }
     return student;
 }
@@ -120,24 +118,16 @@ export async function getStudents(query, user) {
         if (courseIds.length === 0) {
             return { students: [], total: 0, page, limit };
         }
-        const studentIds = await prisma.attendance.findMany({
+        const enrollments = await prisma.enrollment.findMany({
             where: { course_id: { in: courseIds } },
             select: { student_id: true },
             distinct: ['student_id'],
         });
-        const resultStudentIds = await prisma.examResult.findMany({
-            where: { course_id: { in: courseIds } },
-            select: { student_id: true },
-            distinct: ['student_id'],
-        });
-        const ids = new Set([
-            ...studentIds.map((r) => r.student_id),
-            ...resultStudentIds.map((r) => r.student_id),
-        ]);
-        if (ids.size === 0) {
+        const ids = enrollments.map((e) => e.student_id);
+        if (ids.length === 0) {
             return { students: [], total: 0, page, limit };
         }
-        where.id = { in: [...ids] };
+        where.id = { in: ids };
     }
 
     const [students, total] = await Promise.all([

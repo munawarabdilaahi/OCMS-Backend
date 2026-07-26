@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { getPaginationParams } from '../utils/pagination.js';
 import { getTeacherInfo, getTeacherCourseIds } from '../utils/rbac.js';
+import { isStudentEnrolled } from './enrollment.service.js';
 
 const attendanceDelegate = () => prisma.attendance;
 
@@ -31,9 +32,18 @@ export async function createAttendance(data, user) {
     const resolvedCourseId = Number(course_id || courseId);
     const resolvedStatus = String(status).toUpperCase();
 
+    const resolvedStudentId = Number(student_id || studentId);
+
     const teacherInfo = await getTeacherInfo(user);
     if (teacherInfo !== null && !teacherInfo.courseIds.includes(resolvedCourseId)) {
         const error = new Error('Access denied. You can only manage attendance for your assigned courses.');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const enrolled = await isStudentEnrolled(resolvedStudentId, resolvedCourseId);
+    if (!enrolled) {
+        const error = new Error('Student is not enrolled in this course.');
         error.statusCode = 403;
         throw error;
     }
@@ -49,7 +59,7 @@ export async function createAttendance(data, user) {
 
     return attendanceDelegate().create({
         data: {
-            student_id: Number(student_id || studentId),
+            student_id: resolvedStudentId,
             course_id: resolvedCourseId,
             teacher_id: teacherInfo && teacherInfo.teacherId ? teacherInfo.teacherId : (teacher_id || teacherId ? Number(teacher_id || teacherId) : null),
             date: new Date(date),
@@ -211,6 +221,9 @@ export async function bulkCreateAttendance(data, user) {
     for (const record of records) {
         if (!record.student_id && !record.studentId) continue;
         const studentId = Number(record.student_id || record.studentId);
+
+        const enrolled = await isStudentEnrolled(studentId, resolvedCourseId);
+        if (!enrolled) continue;
         const status = String(record.status || 'PRESENT').toUpperCase();
 
         try {

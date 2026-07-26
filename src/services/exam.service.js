@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { getPaginationParams } from '../utils/pagination.js';
 import { getTeacherCourseIds } from '../utils/rbac.js';
+import { isStudentEnrolled } from './enrollment.service.js';
 
 export async function createExamSchedule(data, user) {
     const { course_id, courseId, title, exam_type, examType, exam_date, examDate, start_time, startTime, end_time, endTime, room, status } = data;
@@ -115,10 +116,18 @@ function validateScore(value, fieldName) {
 export async function submitExamResult(data, user) {
     const { exam_schedule_id, examScheduleId, student_id, studentId, course_id, courseId, midterm_score, midtermScore, final_score, finalScore, activity_score, activityScore, remarks, status } = data;
     const resolvedCourseId = Number(course_id || courseId);
+    const resolvedStudentId = Number(student_id || studentId);
 
     const courseIds = await getTeacherCourseIds(user);
     if (courseIds !== null && !courseIds.includes(resolvedCourseId)) {
         const error = new Error('Access denied. You can only submit results for your assigned courses.');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const enrolled = await isStudentEnrolled(resolvedStudentId, resolvedCourseId);
+    if (!enrolled) {
+        const error = new Error('Student is not enrolled in this course.');
         error.statusCode = 403;
         throw error;
     }
@@ -148,7 +157,7 @@ export async function submitExamResult(data, user) {
     const result = await prisma.examResult.create({
         data: {
             ...(exam_schedule_id || examScheduleId ? { exam_schedule_id: Number(exam_schedule_id || examScheduleId) } : {}),
-            student_id: Number(student_id || studentId),
+            student_id: resolvedStudentId,
             course_id: resolvedCourseId,
             midterm_score: midterm,
             final_score: final,

@@ -13,6 +13,7 @@ import roleRoutes from './routes/role.routes.js';
 import feeRoutes from './routes/fee.routes.js';
 import invoiceRoutes from './routes/invoice.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import enrollmentRoutes from './routes/enrollment.routes.js';
 import { errorHandler, notFound } from './middlewares/error.middleware.js';
 import { globalLimiter } from './middlewares/rateLimit.middleware.js';
 
@@ -91,6 +92,7 @@ export function createApp() {
     app.use('/api/fees', feeRoutes);
     app.use('/api/invoices', invoiceRoutes);
     app.use('/api/payments', paymentRoutes);
+    app.use('/api/enrollments', enrollmentRoutes);
 
     app.use(notFound);
     app.use(errorHandler);
