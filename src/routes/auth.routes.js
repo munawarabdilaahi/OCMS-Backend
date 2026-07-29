@@ -14,6 +14,7 @@ import {
     revokeAllSessions,
 } from '../controllers/auth.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
+import { auditLog } from '../middlewares/audit.middleware.js';
 import { authLimiter } from '../middlewares/rateLimit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, verifyEmailSchema, refreshTokenSchema } from '../validators/auth.validator.js';
@@ -25,21 +26,37 @@ const router = Router();
  * /auth/register:
  *   post:
  *     tags: [Auth]
- *     summary: Register a new user
+ *     summary: Register a new user account
+ *     description: Creates a new user account with the provided credentials. Does not require authentication.
+ *     operationId: registerUser
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               name: { type: string }
- *               email: { type: string }
- *               password: { type: string }
- *               phone: { type: string }
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *           example:
+ *             name: John Doe
+ *             email: john@ocms.edu
+ *             password: password123
+ *             phone: "+1234567890"
  *     responses:
  *       201:
  *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       409:
+ *         $ref: '#/components/responses/Conflict'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.post('/register', authLimiter, validate(registerSchema), register);
 
@@ -48,19 +65,35 @@ router.post('/register', authLimiter, validate(registerSchema), register);
  * /auth/login:
  *   post:
  *     tags: [Auth]
- *     summary: Authenticate user
+ *     summary: Authenticate user credentials
+ *     description: Validates email and password, returns JWT access and refresh tokens.
+ *     operationId: loginUser
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               email: { type: string }
- *               password: { type: string }
+ *             $ref: '#/components/schemas/LoginRequest'
+ *           example:
+ *             email: admin@ocms.edu
+ *             password: password123
  *     responses:
  *       200:
  *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/LoginResponse'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.post('/login', authLimiter, validate(loginSchema), login);
 
@@ -70,17 +103,31 @@ router.post('/login', authLimiter, validate(loginSchema), login);
  *   post:
  *     tags: [Auth]
  *     summary: Request password reset email
+ *     description: Sends a password reset link to the provided email address if it exists in the system.
+ *     operationId: forgotPassword
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [email]
  *             properties:
- *               email: { type: string }
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: admin@ocms.edu
  *     responses:
  *       200:
- *         description: Password reset email sent
+ *         description: Password reset email sent if the email exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), forgotPassword);
 
@@ -90,18 +137,34 @@ router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), for
  *   post:
  *     tags: [Auth]
  *     summary: Reset password with token
+ *     description: Resets the user password using a valid reset token received via email.
+ *     operationId: resetPassword
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [token, password]
  *             properties:
- *               token: { type: string }
- *               password: { type: string }
+ *               token:
+ *                 type: string
+ *                 example: abc123def456
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: newpassword123
  *     responses:
  *       200:
  *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.post('/reset-password', authLimiter, validate(resetPasswordSchema), resetPassword);
 
@@ -111,17 +174,30 @@ router.post('/reset-password', authLimiter, validate(resetPasswordSchema), reset
  *   post:
  *     tags: [Auth]
  *     summary: Refresh access token
+ *     description: Issues a new access token using a valid refresh token.
+ *     operationId: refreshAccessToken
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [refreshToken]
  *             properties:
- *               refreshToken: { type: string }
+ *               refreshToken:
+ *                 type: string
+ *                 example: eyJhbGciOiJIUzI1NiIs...
  *     responses:
  *       200:
- *         description: Token refreshed
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.post('/refresh-token', authLimiter, validate(refreshTokenSchema), refreshToken);
 
@@ -131,10 +207,24 @@ router.post('/refresh-token', authLimiter, validate(refreshTokenSchema), refresh
  *   get:
  *     tags: [Auth]
  *     summary: Get current authenticated user
+ *     description: Returns the profile of the currently authenticated user.
+ *     operationId: getCurrentUser
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200:
  *         description: Current user data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.get('/me', authenticate, getMe);
 
@@ -143,11 +233,21 @@ router.get('/me', authenticate, getMe);
  * /auth/logout:
  *   post:
  *     tags: [Auth]
- *     summary: Logout and invalidate session
+ *     summary: Logout user
+ *     description: Invalidates the current refresh token and session.
+ *     operationId: logoutUser
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200:
- *         description: Logged out
+ *         description: Logged out successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.post('/logout', authenticate, logout);
 
@@ -157,10 +257,20 @@ router.post('/logout', authenticate, logout);
  *   post:
  *     tags: [Auth]
  *     summary: Generate email verification token
+ *     description: Generates and sends a new email verification token to the authenticated user.
+ *     operationId: generateEmailVerification
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200:
  *         description: Verification email sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.post('/verify-email/generate', authenticate, generateEmailVerification);
 
@@ -169,18 +279,31 @@ router.post('/verify-email/generate', authenticate, generateEmailVerification);
  * /auth/verify-email:
  *   post:
  *     tags: [Auth]
- *     summary: Verify email with token
+ *     summary: Verify email address with token
+ *     description: Confirms the user email address using a verification token.
+ *     operationId: verifyEmail
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [token]
  *             properties:
- *               token: { type: string }
+ *               token:
+ *                 type: string
+ *                 example: abc123def456
  *     responses:
  *       200:
- *         description: Email verified
+ *         description: Email verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.post('/verify-email', authLimiter, validate(verifyEmailSchema), verifyEmail);
 
@@ -190,10 +313,26 @@ router.post('/verify-email', authLimiter, validate(verifyEmailSchema), verifyEma
  *   get:
  *     tags: [Auth]
  *     summary: List active sessions
+ *     description: Returns all active sessions for the authenticated user.
+ *     operationId: listSessions
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200:
  *         description: Active sessions list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Session'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.get('/sessions', authenticate, getSessions);
 
@@ -203,15 +342,30 @@ router.get('/sessions', authenticate, getSessions);
  *   delete:
  *     tags: [Auth]
  *     summary: Revoke a specific session
+ *     description: Revokes a specific session by its ID.
+ *     operationId: revokeSession
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
  *         name: sessionId
  *         required: true
- *         schema: { type: number }
+ *         description: ID of the session to revoke
+ *         schema:
+ *           type: integer
+ *           example: 1
  *     responses:
  *       200:
- *         description: Session revoked
+ *         description: Session revoked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.delete('/sessions/:sessionId', authenticate, revokeSession);
 
@@ -221,10 +375,20 @@ router.delete('/sessions/:sessionId', authenticate, revokeSession);
  *   delete:
  *     tags: [Auth]
  *     summary: Revoke all sessions
+ *     description: Revokes all active sessions for the authenticated user except the current one.
+ *     operationId: revokeAllSessions
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200:
- *         description: All sessions revoked
+ *         description: All sessions revoked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
 router.delete('/sessions', authenticate, revokeAllSessions);
 
