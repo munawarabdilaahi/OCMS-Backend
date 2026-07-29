@@ -32,3 +32,25 @@ export const globalLimiter = rateLimit({
         message: 'Too many requests. Please try again later.',
     },
 });
+
+export const apiLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many API requests. Please slow down.',
+    },
+});
+
+export const crudLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many write requests. Please slow down.',
+    },
+});
