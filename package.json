@@ -10,7 +10,9 @@
     "lint": "eslint \"src/**/*.js\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "test": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js --watch"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
@@ -36,6 +38,7 @@
     "@types/node": "^22.10.7",
     "eslint": "^9.17.0",
     "globals": "^15.14.0",
+    "jest": "30.4.2",
     "prisma": "6.19.3",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
