@@ -67,7 +67,7 @@ export async function createInvoice(data) {
     });
 }
 
-export async function listInvoices(query) {
+export async function listInvoices(query, user) {
     const { search, status, student_id, academic_year } = query;
     const { page, limit, skip } = getPaginationParams(query);
     const where = {};
@@ -79,6 +79,9 @@ export async function listInvoices(query) {
             { invoice_number: { contains: search } },
             { student: { user: { name: { contains: search } } } },
         ];
+    }
+    if (user.roleName === 'Student') {
+        where.student = { user_id: user.id };
     }
     const [invoices, total] = await Promise.all([
         invoiceDelegate().findMany({
@@ -93,24 +96,32 @@ export async function listInvoices(query) {
     return { invoices, total, page, limit };
 }
 
-export async function getInvoiceById(id) {
-    return invoiceDelegate().findUnique({
+export async function getInvoiceById(id, user) {
+    const invoice = await invoiceDelegate().findUnique({
         where: { id: Number(id) },
         include: {
             ...invoiceInclude,
             payments: { orderBy: { created_at: 'desc' } },
         },
     });
+    if (invoice && user.roleName === 'Student' && invoice.student?.user_id !== user.id) {
+        return null;
+    }
+    return invoice;
 }
 
-export async function getInvoiceByNumber(invoiceNumber) {
-    return invoiceDelegate().findUnique({
+export async function getInvoiceByNumber(invoiceNumber, user) {
+    const invoice = await invoiceDelegate().findUnique({
         where: { invoice_number: invoiceNumber },
         include: {
             ...invoiceInclude,
             payments: { orderBy: { created_at: 'desc' } },
         },
     });
+    if (invoice && user.roleName === 'Student' && invoice.student?.user_id !== user.id) {
+        return null;
+    }
+    return invoice;
 }
 
 export async function updateInvoice(id, data) {
@@ -153,10 +164,13 @@ export async function deleteInvoice(id) {
     return existing;
 }
 
-export async function getInvoiceStats(query) {
+export async function getInvoiceStats(query, user) {
     const { student_id } = query;
     const where = {};
     if (student_id) where.student_id = Number(student_id);
+    if (user.roleName === 'Student') {
+        where.student = { user_id: user.id };
+    }
 
     const [totalInvoiced, outstanding, paid, overdue, openCount] = await Promise.all([
         invoiceDelegate().aggregate({ where, _sum: { amount: true } }),

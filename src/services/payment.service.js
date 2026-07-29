@@ -94,7 +94,7 @@ export async function createPayment(data, userId) {
     });
 }
 
-export async function listPayments(query) {
+export async function listPayments(query, user) {
     const { search, status, payment_method, student_id } = query;
     const { page, limit, skip } = getPaginationParams(query);
     const where = {};
@@ -107,6 +107,9 @@ export async function listPayments(query) {
             { invoice: { invoice_number: { contains: search } } },
             { invoice: { student: { user: { name: { contains: search } } } } },
         ];
+    }
+    if (user.roleName === 'Student') {
+        where.invoice = { ...(where.invoice || {}), student: { user_id: user.id } };
     }
     const [payments, total] = await Promise.all([
         paymentDelegate().findMany({
@@ -121,17 +124,27 @@ export async function listPayments(query) {
     return { payments, total, page, limit };
 }
 
-export async function getPaymentById(id) {
-    return paymentDelegate().findUnique({
+export async function getPaymentById(id, user) {
+    const payment = await paymentDelegate().findUnique({
         where: { id: Number(id) },
         include: { ...paymentInclude, transactions: true },
     });
+    if (payment && user.roleName === 'Student') {
+        const invoice = await prisma.invoice.findUnique({ where: { id: payment.invoice_id } });
+        if (!invoice || invoice.student?.user_id !== user.id) {
+            return null;
+        }
+    }
+    return payment;
 }
 
-export async function getPaymentStats(query) {
+export async function getPaymentStats(query, user) {
     const { student_id } = query;
     const where = {};
     if (student_id) where.invoice = { student_id: Number(student_id) };
+    if (user.roleName === 'Student') {
+        where.invoice = { ...(where.invoice || {}), student: { user_id: user.id } };
+    }
 
     const [totalReceived, thisMonth, completedCount, pendingCount] = await Promise.all([
         paymentDelegate().aggregate({ where: { ...where, status: 'Completed' }, _sum: { amount: true } }),

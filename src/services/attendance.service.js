@@ -191,7 +191,7 @@ export async function updateAttendance(id, data, user) {
     return attendanceDelegate().update({ where: { id: recordId }, data: updateData, include: attendanceInclude });
 }
 
-export async function deleteAttendance(id) {
+export async function deleteAttendance(id, user) {
     const recordId = Number(id);
     const existing = await attendanceDelegate().findUnique({ where: { id: recordId } });
     if (!existing) {
@@ -199,6 +199,14 @@ export async function deleteAttendance(id) {
         error.statusCode = 404;
         throw error;
     }
+
+    const teacherInfo = await getTeacherCourseIds(user);
+    if (teacherInfo !== null && !teacherInfo.courseIds.includes(existing.course_id)) {
+        const error = new Error('Access denied. You can only delete attendance for your assigned courses.');
+        error.statusCode = 403;
+        throw error;
+    }
+
     await attendanceDelegate().delete({ where: { id: recordId } });
     return existing;
 }
