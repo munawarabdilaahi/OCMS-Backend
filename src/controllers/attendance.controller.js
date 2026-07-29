@@ -44,7 +44,7 @@ export async function updateAttendance(req, res, next) {
 
 export async function deleteAttendance(req, res, next) {
     try {
-        await deleteAttendanceService(req.params.id);
+        await deleteAttendanceService(req.params.id, req.user);
         return res.status(200).json({ success: true, message: 'Attendance record deleted successfully.' });
     } catch (error) {
         next(error);

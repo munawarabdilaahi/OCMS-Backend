@@ -1,4 +1,5 @@
 import { serializeUser, getMe as getMeService, register as registerService, login as loginService, refreshToken as refreshTokenService, logout as logoutService, forgotPassword as forgotPasswordService, resetPassword as resetPasswordService, generateEmailVerification as generateEmailVerificationService, verifyEmail as verifyEmailService, getSessions as getSessionsService, revokeSession as revokeSessionService, revokeAllSessions as revokeAllSessionsService } from '../services/auth.service.js';
+import prisma from '../config/db.js';
 
 export async function getMe(req, res, next) {
     try {
@@ -12,6 +13,18 @@ export async function getMe(req, res, next) {
 export async function register(req, res, next) {
     try {
         const { user, accessToken, refreshToken } = await registerService(req.body, req.headers, req.ip);
+        prisma.auditLog.create({
+            data: {
+                user_id: user.id,
+                action: 'REGISTER',
+                resource: '/auth/register',
+                method: 'POST',
+                status_code: 201,
+                ip_address: req.ip,
+                user_agent: req.headers['user-agent'] || null,
+                metadata: { email: user.email },
+            },
+        }).catch(() => {});
         return res.status(201).json({
             success: true,
             message: 'User registered successfully.',
@@ -25,6 +38,17 @@ export async function register(req, res, next) {
 export async function login(req, res, next) {
     try {
         const { user, accessToken, refreshToken } = await loginService(req.body, req.headers, req.ip);
+        prisma.auditLog.create({
+            data: {
+                user_id: user.id,
+                action: 'LOGIN',
+                resource: '/auth/login',
+                method: 'POST',
+                status_code: 200,
+                ip_address: req.ip,
+                user_agent: req.headers['user-agent'] || null,
+            },
+        }).catch(() => {});
         return res.status(200).json({
             success: true,
             message: 'Login successful.',
