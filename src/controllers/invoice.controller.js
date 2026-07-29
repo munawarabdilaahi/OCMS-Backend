@@ -12,7 +12,7 @@ export async function createInvoice(req, res, next) {
 
 export async function listInvoices(req, res, next) {
     try {
-        const { invoices, total, page, limit } = await listInvoicesService(req.query);
+        const { invoices, total, page, limit } = await listInvoicesService(req.query, req.user);
         return res.status(200).json({
             success: true,
             data: invoices.map(serializeInvoice),
@@ -25,7 +25,7 @@ export async function listInvoices(req, res, next) {
 
 export async function getInvoiceById(req, res, next) {
     try {
-        const invoice = await getInvoiceByIdService(req.params.id);
+        const invoice = await getInvoiceByIdService(req.params.id, req.user);
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
         return res.status(200).json({ success: true, data: serializeInvoice(invoice) });
     } catch (error) {
@@ -35,7 +35,7 @@ export async function getInvoiceById(req, res, next) {
 
 export async function getInvoiceByNumber(req, res, next) {
     try {
-        const invoice = await getInvoiceByNumberService(req.params.invoiceNumber);
+        const invoice = await getInvoiceByNumberService(req.params.invoiceNumber, req.user);
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
         return res.status(200).json({ success: true, data: serializeInvoice(invoice) });
     } catch (error) {
@@ -63,7 +63,7 @@ export async function deleteInvoice(req, res, next) {
 
 export async function getInvoiceStats(req, res, next) {
     try {
-        const data = await getInvoiceStatsService(req.query);
+        const data = await getInvoiceStatsService(req.query, req.user);
         return res.status(200).json({ success: true, data });
     } catch (error) {
         next(error);

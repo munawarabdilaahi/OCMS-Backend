@@ -12,7 +12,7 @@ export async function createPayment(req, res, next) {
 
 export async function listPayments(req, res, next) {
     try {
-        const { payments, total, page, limit } = await listPaymentsService(req.query);
+        const { payments, total, page, limit } = await listPaymentsService(req.query, req.user);
         return res.status(200).json({
             success: true,
             data: payments.map(serializePayment),
@@ -25,7 +25,7 @@ export async function listPayments(req, res, next) {
 
 export async function getPaymentById(req, res, next) {
     try {
-        const payment = await getPaymentByIdService(req.params.id);
+        const payment = await getPaymentByIdService(req.params.id, req.user);
         if (!payment) return res.status(404).json({ success: false, message: 'Payment not found.' });
         return res.status(200).json({ success: true, data: serializePayment(payment) });
     } catch (error) {
@@ -35,7 +35,7 @@ export async function getPaymentById(req, res, next) {
 
 export async function getPaymentStats(req, res, next) {
     try {
-        const data = await getPaymentStatsService(req.query);
+        const data = await getPaymentStatsService(req.query, req.user);
         return res.status(200).json({ success: true, data });
     } catch (error) {
         next(error);
