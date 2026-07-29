@@ -83,6 +83,7 @@ model User {
   refresh_tokens     RefreshToken[]
   password_resets    PasswordResetToken[]
   sessions           Session[]
+  audit_logs         AuditLog[]
   created_at         DateTime             @default(now())
   updated_at         DateTime             @updatedAt
 
@@ -381,4 +382,22 @@ model Session {
   created_at     DateTime       @default(now())
 
   @@index([user_id])
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  user_id     Int?
+  user        User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  action      String
+  resource    String
+  method      String?
+  status_code Int?
+  ip_address  String?
+  user_agent  String?
+  metadata    Json?
+  created_at  DateTime @default(now())
+
+  @@index([user_id])
+  @@index([action])
+  @@index([created_at])
 }

@@ -19,6 +19,8 @@ import enrollmentRoutes from './routes/enrollment.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import { errorHandler, notFound } from './middlewares/error.middleware.js';
 import { globalLimiter } from './middlewares/rateLimit.middleware.js';
+import { sanitize } from './middlewares/sanitize.middleware.js';
+import { csrfProtection } from './middlewares/csrf.middleware.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -54,6 +56,9 @@ export function createApp() {
         crossOriginEmbedderPolicy: false,
         crossOriginResourcePolicy: { policy: 'same-site' },
         referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+        hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+        xFrameOptions: { action: 'deny' },
+        xContentTypeOptions: true,
     }));
 
     const allowedOrigins = process.env.CORS_ORIGIN
@@ -63,7 +68,7 @@ export function createApp() {
     app.use(cors({
         origin: allowedOrigins,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
         credentials: true,
         maxAge: 86400,
     }));
@@ -75,7 +80,9 @@ export function createApp() {
 
     app.use(globalLimiter);
     app.use(express.json({ limit: '1mb' }));
-    app.use(express.urlencoded({ extended: true }));
+    app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+    app.use(sanitize);
+    app.use(csrfProtection);
 
     app.get('/api/health', (req, res) => {
         res.status(200).json({
