@@ -1,8 +1,10 @@
 import { buildPaginationMeta } from '../utils/pagination.js';
+import { requireAdmin } from '../utils/rbac.js';
 import { serializeCourse, createCourse as createCourseService, getCourses as getCoursesService, getCourseById as getCourseByIdService, updateCourse as updateCourseService, deleteCourse as deleteCourseService } from '../services/course.service.js';
 
 export async function createCourse(req, res, next) {
     try {
+        requireAdmin(req.user);
         const course = await createCourseService(req.body);
         return res.status(201).json({ success: true, message: 'Course created successfully.', data: serializeCourse(course) });
     } catch (error) {
@@ -38,6 +40,7 @@ export async function getCourseById(req, res, next) {
 
 export async function updateCourse(req, res, next) {
     try {
+        requireAdmin(req.user);
         const course = await updateCourseService(req.params.id, req.body);
         return res.status(200).json({ success: true, message: 'Course updated successfully.', data: serializeCourse(course) });
     } catch (error) {
@@ -47,6 +50,7 @@ export async function updateCourse(req, res, next) {
 
 export async function deleteCourse(req, res, next) {
     try {
+        requireAdmin(req.user);
         await deleteCourseService(req.params.id);
         return res.status(200).json({ success: true, message: 'Course deleted successfully.' });
     } catch (error) {
