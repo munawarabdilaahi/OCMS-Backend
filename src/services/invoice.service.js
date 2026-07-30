@@ -174,10 +174,10 @@ export async function getInvoiceStats(query, user) {
 
     const [totalInvoiced, outstanding, paid, overdue, openCount] = await Promise.all([
         invoiceDelegate().aggregate({ where, _sum: { amount: true } }),
-        invoiceDelegate().aggregate({ where: { ...where, status: { in: ['Pending', 'Partial', 'Overdue'] } }, _sum: { balance: true } }),
-        invoiceDelegate().aggregate({ where: { ...where, status: 'Paid' }, _sum: { amount: true } }),
-        invoiceDelegate().aggregate({ where: { ...where, status: 'Overdue' }, _sum: { balance: true } }),
-        invoiceDelegate().count({ where: { ...where, status: { in: ['Pending', 'Partial', 'Overdue'] } } }),
+        invoiceDelegate().aggregate({ where: { ...where, status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] } }, _sum: { balance: true } }),
+        invoiceDelegate().aggregate({ where: { ...where, status: 'PAID' }, _sum: { amount: true } }),
+        invoiceDelegate().aggregate({ where: { ...where, status: 'OVERDUE' }, _sum: { balance: true } }),
+        invoiceDelegate().count({ where: { ...where, status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] } } }),
     ]);
 
     return {

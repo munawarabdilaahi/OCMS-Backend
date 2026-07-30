@@ -38,13 +38,13 @@ async function updateInvoiceBalance(invoiceId, tx) {
     const invoice = await tx.invoice.findUnique({ where: { id: invoiceId }, include: { payments: true } });
     if (!invoice) return;
     const paidSum = invoice.payments
-        .filter((p) => p.status === 'Completed')
+        .filter((p) => p.status === 'COMPLETED')
         .reduce((sum, p) => sum + Number(p.amount), 0);
     const balance = Number(invoice.amount) - paidSum;
-    let status = 'Pending';
-    if (balance <= 0) status = 'Paid';
-    else if (paidSum > 0) status = 'Partial';
-    if (status !== 'Paid' && new Date(invoice.due_date) < new Date()) status = 'Overdue';
+    let status = 'PENDING';
+    if (balance <= 0) status = 'PAID';
+    else if (paidSum > 0) status = 'PARTIAL';
+    if (status !== 'PAID' && new Date(invoice.due_date) < new Date()) status = 'OVERDUE';
     await tx.invoice.update({
         where: { id: invoiceId },
         data: { paid_amount: paidSum, balance: Math.max(0, balance), status },
@@ -52,7 +52,7 @@ async function updateInvoiceBalance(invoiceId, tx) {
 }
 
 export async function createPayment(data, userId) {
-    const { invoice_id, amount, payment_method, reference_number, notes, status = 'Completed' } = data;
+    const { invoice_id, amount, payment_method, reference_number, notes, status = 'COMPLETED' } = data;
     const numericAmount = Number(amount);
     const invoice = await prisma.invoice.findUnique({ where: { id: Number(invoice_id) } });
     if (!invoice) {
@@ -82,7 +82,7 @@ export async function createPayment(data, userId) {
                 reference: reference_number || null,
             },
         });
-        if (status === 'Completed') {
+        if (status === 'COMPLETED') {
             await updateInvoiceBalance(Number(invoice_id), tx);
         }
         return newPayment;
@@ -147,17 +147,17 @@ export async function getPaymentStats(query, user) {
     }
 
     const [totalReceived, thisMonth, completedCount, pendingCount] = await Promise.all([
-        paymentDelegate().aggregate({ where: { ...where, status: 'Completed' }, _sum: { amount: true } }),
+        paymentDelegate().aggregate({ where: { ...where, status: 'COMPLETED' }, _sum: { amount: true } }),
         paymentDelegate().aggregate({
             where: {
                 ...where,
-                status: 'Completed',
+                status: 'COMPLETED',
                 created_at: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
             },
             _sum: { amount: true },
         }),
-        paymentDelegate().count({ where: { ...where, status: 'Completed' } }),
-        paymentDelegate().count({ where: { ...where, status: 'Pending' } }),
+        paymentDelegate().count({ where: { ...where, status: 'COMPLETED' } }),
+        paymentDelegate().count({ where: { ...where, status: 'PENDING' } }),
     ]);
 
     return {

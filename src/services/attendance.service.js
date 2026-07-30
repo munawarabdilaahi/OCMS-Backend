@@ -90,8 +90,8 @@ export async function getAttendance(query, user) {
         } : {}),
         ...(search ? {
             OR: [
-                { student: { user: { name: { contains: search, mode: 'insensitive' } } } },
-                { course: { title: { contains: search, mode: 'insensitive' } } },
+                { student: { user: { name: { contains: search } } } },
+                { course: { title: { contains: search } } },
             ],
         } : {}),
     };
