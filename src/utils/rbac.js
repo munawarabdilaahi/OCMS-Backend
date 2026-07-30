@@ -26,6 +26,14 @@ export async function canTeacherAccessCourse(user, courseId) {
     return courseIds.includes(Number(courseId));
 }
 
+export function requireAdmin(user) {
+    if (!user || !['Admin', 'SuperAdmin'].includes(user.roleName)) {
+        const error = new Error('Access denied. Admin or SuperAdmin role required.');
+        error.statusCode = 403;
+        throw error;
+    }
+}
+
 export async function canTeacherAccessStudent(user, studentId) {
     if (!user || user.roleName !== 'Teacher') return true;
     const courseIds = await getTeacherCourseIds(user);

@@ -8,15 +8,19 @@ const JWT_AUDIENCE = 'ocms-client';
 
 export function authenticate(req, res, next) {
     const header = req.headers.authorization;
-    if (!header || !header.startsWith('Bearer ')) {
+    let token = null;
+
+    if (header && header.startsWith('Bearer ')) {
+        token = header.split(' ')[1];
+    } else if (req.cookies?.access_token) {
+        token = req.cookies.access_token;
+    }
+
+    if (!token) {
         return res.status(401).json({
             success: false,
             message: 'Authentication required. Please provide a valid token.',
         });
-    }
-    const token = header.split(' ')[1];
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'Invalid token format.' });
     }
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET, {
