@@ -10,7 +10,7 @@ export const createCourseSchema = z.object({
     departmentId: z.union([z.string(), z.number()]).optional(),
     teacher_id: z.union([z.string(), z.number()]).optional(),
     teacherId: z.union([z.string(), z.number()]).optional(),
-    status: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
 
 export const updateCourseSchema = z.object({
@@ -23,5 +23,5 @@ export const updateCourseSchema = z.object({
     departmentId: z.union([z.string(), z.number()]).optional(),
     teacher_id: z.union([z.string(), z.number()]).optional(),
     teacherId: z.union([z.string(), z.number()]).optional(),
-    status: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
