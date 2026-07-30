@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { auditLog } from '../middlewares/audit.middleware.js';
 import {
     createCourse,
     getCourses,
@@ -60,7 +61,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/', authorize('Admin', 'SuperAdmin'), validate(createCourseSchema), createCourse);
+router.post('/', authorize('Admin', 'SuperAdmin'), auditLog('CREATE_COURSE'), validate(createCourseSchema), createCourse);
 
 /**
  * @openapi
@@ -205,7 +206,7 @@ router.get('/:id', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student', 'Regis
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.put('/:id', authorize('Admin', 'SuperAdmin'), validate(updateCourseSchema), updateCourse);
+router.put('/:id', authorize('Admin', 'SuperAdmin'), auditLog('UPDATE_COURSE'), validate(updateCourseSchema), updateCourse);
 
 /**
  * @openapi
@@ -240,6 +241,6 @@ router.put('/:id', authorize('Admin', 'SuperAdmin'), validate(updateCourseSchema
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/:id', authorize('Admin', 'SuperAdmin'), deleteCourse);
+router.delete('/:id', authorize('Admin', 'SuperAdmin'), auditLog('DELETE_COURSE'), deleteCourse);
 
 export default router;
