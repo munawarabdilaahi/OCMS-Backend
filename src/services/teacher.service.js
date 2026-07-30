@@ -110,11 +110,11 @@ export async function getTeachers(query) {
         ...(search
             ? {
                 OR: [
-                    { employee_no: { contains: search, mode: 'insensitive' } },
-                    { user: { name: { contains: search, mode: 'insensitive' } } },
-                    { user: { email: { contains: search, mode: 'insensitive' } } },
-                    { department: { name: { contains: search, mode: 'insensitive' } } },
-                    { position: { contains: search, mode: 'insensitive' } },
+                    { employee_no: { contains: search } },
+                    { user: { name: { contains: search } } },
+                    { user: { email: { contains: search } } },
+                    { department: { name: { contains: search } } },
+                    { position: { contains: search } },
                 ],
             }
             : {}),

@@ -104,10 +104,10 @@ export async function getStudents(query, user) {
         ...(search
             ? {
                 OR: [
-                    { admission_no: { contains: search, mode: 'insensitive' } },
-                    { user: { name: { contains: search, mode: 'insensitive' } } },
-                    { user: { email: { contains: search, mode: 'insensitive' } } },
-                    { department: { name: { contains: search, mode: 'insensitive' } } },
+                    { admission_no: { contains: search } },
+                    { user: { name: { contains: search } } },
+                    { user: { email: { contains: search } } },
+                    { department: { name: { contains: search } } },
                 ],
             }
             : {}),

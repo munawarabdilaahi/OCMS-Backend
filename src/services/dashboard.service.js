@@ -29,12 +29,12 @@ export async function getAdminDashboard() {
         prisma.invoice.aggregate({
             _sum: { amount: true, balance: true },
             _count: { id: true },
-            where: { status: { in: ['Pending', 'Partial', 'Overdue'] } },
+            where: { status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] } },
         }),
         prisma.payment.aggregate({
             _sum: { amount: true },
             where: {
-                status: 'Completed',
+                status: 'COMPLETED',
                 created_at: {
                     gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
                 },
