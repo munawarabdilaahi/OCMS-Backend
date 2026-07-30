@@ -8,7 +8,7 @@ const baseUserSchema = z.object({
     role_id: z.union([z.string(), z.number()]).optional(),
     roleId: z.union([z.string(), z.number()]).optional(),
     phone: z.string().optional(),
-    status: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED']).optional(),
 });
 
 export const createUserSchema = baseUserSchema.refine(data => data.role_id || data.roleId, {
@@ -23,5 +23,5 @@ export const updateUserSchema = z.object({
     role_id: z.union([z.string(), z.number()]).optional(),
     roleId: z.union([z.string(), z.number()]).optional(),
     phone: z.string().optional(),
-    status: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED']).optional(),
 });
