@@ -17,5 +17,5 @@ export const createPaymentSchema = z.object({
     reference_number: z.string().optional(),
     referenceNumber: z.string().optional(),
     notes: z.string().optional(),
-    status: z.string().optional(),
+    status: z.enum(['COMPLETED', 'PENDING', 'FAILED', 'REFUNDED']).optional(),
 });

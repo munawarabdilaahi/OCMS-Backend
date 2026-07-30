@@ -12,7 +12,7 @@ const baseFeeSchema = z.object({
     department_id: z.union([z.string(), z.number()]).optional(),
     departmentId: z.union([z.string(), z.number()]).optional(),
     semester: z.string().optional(),
-    status: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
 
 export const createFeeSchema = baseFeeSchema;
@@ -29,5 +29,5 @@ export const updateFeeSchema = z.object({
     department_id: z.union([z.string(), z.number()]).optional(),
     departmentId: z.union([z.string(), z.number()]).optional(),
     semester: z.string().optional(),
-    status: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });

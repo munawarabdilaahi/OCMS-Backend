@@ -14,7 +14,7 @@ const baseInvoiceSchema = z.object({
     academicYear: z.string().optional(),
     semester: z.string().optional(),
     notes: z.string().optional(),
-    status: z.string().optional(),
+    status: z.enum(['PENDING', 'PAID', 'PARTIAL', 'OVERDUE', 'CANCELLED', 'REFUNDED']).optional(),
 });
 
 export const createInvoiceSchema = baseInvoiceSchema;
@@ -33,5 +33,5 @@ export const updateInvoiceSchema = z.object({
     academicYear: z.string().optional(),
     semester: z.string().optional(),
     notes: z.string().optional(),
-    status: z.string().optional(),
+    status: z.enum(['PENDING', 'PAID', 'PARTIAL', 'OVERDUE', 'CANCELLED', 'REFUNDED']).optional(),
 });

@@ -41,5 +41,5 @@ export const updateStudentSchema = z.object({
 }, { message: 'Invalid gender. Allowed values: MALE, FEMALE, OTHER', path: ['gender'] });
 
 export const updateStudentStatusSchema = z.object({
-    status: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'GRADUATED', 'WITHDRAWN', 'DELETED']).optional(),
 });
