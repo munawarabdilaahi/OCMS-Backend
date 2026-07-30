@@ -62,7 +62,7 @@ export async function getEnrollments(query, user) {
     if (status) where.status = status;
     if (search) {
         where.student = {
-            user: { name: { contains: search, mode: 'insensitive' } },
+            user: { name: { contains: search } },
         };
     }
 

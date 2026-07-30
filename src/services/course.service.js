@@ -63,9 +63,9 @@ export async function getCourses(query, user) {
         ...(search
             ? {
                 OR: [
-                    { code: { contains: search, mode: 'insensitive' } },
-                    { title: { contains: search, mode: 'insensitive' } },
-                    { department: { name: { contains: search, mode: 'insensitive' } } },
+                    { code: { contains: search } },
+                    { title: { contains: search } },
+                    { department: { name: { contains: search } } },
                 ],
             }
             : {}),
