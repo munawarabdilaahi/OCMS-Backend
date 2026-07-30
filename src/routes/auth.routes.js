@@ -58,7 +58,7 @@ const router = Router();
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/register', authLimiter, validate(registerSchema), register);
+router.post('/register', authLimiter, auditLog('REGISTER'), validate(registerSchema), register);
 
 /**
  * @openapi
@@ -95,7 +95,7 @@ router.post('/register', authLimiter, validate(registerSchema), register);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/login', authLimiter, auditLog('LOGIN'), validate(loginSchema), login);
 
 /**
  * @openapi
@@ -129,7 +129,7 @@ router.post('/login', authLimiter, validate(loginSchema), login);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), forgotPassword);
+router.post('/forgot-password', authLimiter, auditLog('FORGOT_PASSWORD'), validate(forgotPasswordSchema), forgotPassword);
 
 /**
  * @openapi
@@ -166,7 +166,7 @@ router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), for
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/reset-password', authLimiter, validate(resetPasswordSchema), resetPassword);
+router.post('/reset-password', authLimiter, auditLog('RESET_PASSWORD'), validate(resetPasswordSchema), resetPassword);
 
 /**
  * @openapi
@@ -199,7 +199,7 @@ router.post('/reset-password', authLimiter, validate(resetPasswordSchema), reset
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/refresh-token', authLimiter, validate(refreshTokenSchema), refreshToken);
+router.post('/refresh-token', authLimiter, auditLog('REFRESH_TOKEN'), validate(refreshTokenSchema), refreshToken);
 
 /**
  * @openapi
@@ -249,7 +249,7 @@ router.get('/me', authenticate, getMe);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/logout', authenticate, logout);
+router.post('/logout', authenticate, auditLog('LOGOUT'), logout);
 
 /**
  * @openapi
@@ -272,7 +272,7 @@ router.post('/logout', authenticate, logout);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/verify-email/generate', authenticate, generateEmailVerification);
+router.post('/verify-email/generate', authenticate, auditLog('GENERATE_EMAIL_VERIFICATION'), generateEmailVerification);
 
 /**
  * @openapi
@@ -305,7 +305,7 @@ router.post('/verify-email/generate', authenticate, generateEmailVerification);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/verify-email', authLimiter, validate(verifyEmailSchema), verifyEmail);
+router.post('/verify-email', authLimiter, auditLog('VERIFY_EMAIL'), validate(verifyEmailSchema), verifyEmail);
 
 /**
  * @openapi
@@ -367,7 +367,7 @@ router.get('/sessions', authenticate, getSessions);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/sessions/:sessionId', authenticate, revokeSession);
+router.delete('/sessions/:sessionId', authenticate, auditLog('REVOKE_SESSION'), revokeSession);
 
 /**
  * @openapi
@@ -390,6 +390,6 @@ router.delete('/sessions/:sessionId', authenticate, revokeSession);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/sessions', authenticate, revokeAllSessions);
+router.delete('/sessions', authenticate, auditLog('REVOKE_ALL_SESSIONS'), revokeAllSessions);
 
 export default router;

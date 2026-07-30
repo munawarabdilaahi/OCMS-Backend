@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { auditLog } from '../middlewares/audit.middleware.js';
+import { validate } from '../middlewares/validate.middleware.js';
+import { createTeacherSchema, updateTeacherSchema } from '../validators/teacher.validator.js';
 import { createTeacher, deleteTeacher, getTeacherById, getTeachers, updateTeacher } from '../controllers/teacher.controller.js';
 
 const router = Router();
@@ -48,7 +51,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/', authorize('Admin', 'SuperAdmin'), createTeacher);
+router.post('/', authorize('Admin', 'SuperAdmin'), validate(createTeacherSchema), auditLog('CREATE_TEACHER'), createTeacher);
 
 /**
  * @openapi
@@ -193,7 +196,7 @@ router.get('/:id', authorize('Admin', 'SuperAdmin'), getTeacherById);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.put('/:id', authorize('Admin', 'SuperAdmin'), updateTeacher);
+router.put('/:id', authorize('Admin', 'SuperAdmin'), validate(updateTeacherSchema), auditLog('UPDATE_TEACHER'), updateTeacher);
 
 
 /**
@@ -229,6 +232,6 @@ router.put('/:id', authorize('Admin', 'SuperAdmin'), updateTeacher);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/:id', authorize('Admin', 'SuperAdmin'), deleteTeacher);
+router.delete('/:id', authorize('Admin', 'SuperAdmin'), auditLog('DELETE_TEACHER'), deleteTeacher);
 
 export default router;

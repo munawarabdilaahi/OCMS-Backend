@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { auditLog } from '../middlewares/audit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { createUserSchema, updateUserSchema } from '../validators/user.validator.js';
 import { createUser, deleteUser, getUserById, getUsers, updateUser } from '../controllers/user.controller.js';
@@ -160,7 +161,7 @@ router.get('/:id', authorize('Admin', 'SuperAdmin'), getUserById);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/', authorize('Admin', 'SuperAdmin'), validate(createUserSchema), createUser);
+router.post('/', authorize('Admin', 'SuperAdmin'), auditLog('CREATE_USER'), validate(createUserSchema), createUser);
 
 /**
  * @openapi
@@ -218,7 +219,7 @@ router.post('/', authorize('Admin', 'SuperAdmin'), validate(createUserSchema), c
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.put('/:id', authorize('Admin', 'SuperAdmin'), validate(updateUserSchema), updateUser);
+router.put('/:id', authorize('Admin', 'SuperAdmin'), auditLog('UPDATE_USER'), validate(updateUserSchema), updateUser);
 
 /**
  * @openapi
@@ -253,6 +254,6 @@ router.put('/:id', authorize('Admin', 'SuperAdmin'), validate(updateUserSchema),
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/:id', authorize('Admin', 'SuperAdmin'), deleteUser);
+router.delete('/:id', authorize('Admin', 'SuperAdmin'), auditLog('DELETE_USER'), deleteUser);
 
 export default router;
