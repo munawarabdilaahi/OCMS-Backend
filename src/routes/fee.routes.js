@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { auditLog } from '../middlewares/audit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { createFeeSchema, updateFeeSchema } from '../validators/fee.validator.js';
 import { createFee, listFees, getFeeById, updateFee, deleteFee } from '../controllers/fee.controller.js';
@@ -146,7 +147,7 @@ router.get('/:id', authorize('Admin', 'SuperAdmin', 'Accountant'), getFeeById);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/', authorize('Admin', 'SuperAdmin', 'Accountant'), validate(createFeeSchema), createFee);
+router.post('/', authorize('Admin', 'SuperAdmin', 'Accountant'), auditLog('CREATE_FEE'), validate(createFeeSchema), createFee);
 
 /**
  * @openapi
@@ -210,7 +211,7 @@ router.post('/', authorize('Admin', 'SuperAdmin', 'Accountant'), validate(create
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.put('/:id', authorize('Admin', 'SuperAdmin', 'Accountant'), validate(updateFeeSchema), updateFee);
+router.put('/:id', authorize('Admin', 'SuperAdmin', 'Accountant'), auditLog('UPDATE_FEE'), validate(updateFeeSchema), updateFee);
 
 /**
  * @openapi
@@ -245,6 +246,6 @@ router.put('/:id', authorize('Admin', 'SuperAdmin', 'Accountant'), validate(upda
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/:id', authorize('Admin', 'SuperAdmin', 'Accountant'), deleteFee);
+router.delete('/:id', authorize('Admin', 'SuperAdmin', 'Accountant'), auditLog('DELETE_FEE'), deleteFee);
 
 export default router;

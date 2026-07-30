@@ -35,7 +35,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/stats', authorize('Admin', 'SuperAdmin', 'Accountant'), getInvoiceStats);
+router.get('/stats', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), getInvoiceStats);
 
 /**
  * @openapi
@@ -93,7 +93,7 @@ router.get('/stats', authorize('Admin', 'SuperAdmin', 'Accountant'), getInvoiceS
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/', authorize('Admin', 'SuperAdmin', 'Accountant'), listInvoices);
+router.get('/', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), listInvoices);
 
 /**
  * @openapi
@@ -132,7 +132,7 @@ router.get('/', authorize('Admin', 'SuperAdmin', 'Accountant'), listInvoices);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/by-number/:invoiceNumber', authorize('Admin', 'SuperAdmin', 'Accountant'), getInvoiceByNumber);
+router.get('/by-number/:invoiceNumber', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), getInvoiceByNumber);
 
 /**
  * @openapi
@@ -171,7 +171,7 @@ router.get('/by-number/:invoiceNumber', authorize('Admin', 'SuperAdmin', 'Accoun
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/:id', authorize('Admin', 'SuperAdmin', 'Accountant'), getInvoiceById);
+router.get('/:id', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), getInvoiceById);
 
 /**
  * @openapi

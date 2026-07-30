@@ -35,7 +35,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/stats', authorize('Admin', 'SuperAdmin', 'Accountant'), getPaymentStats);
+router.get('/stats', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), getPaymentStats);
 
 /**
  * @openapi
@@ -87,7 +87,7 @@ router.get('/stats', authorize('Admin', 'SuperAdmin', 'Accountant'), getPaymentS
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/', authorize('Admin', 'SuperAdmin', 'Accountant'), listPayments);
+router.get('/', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), listPayments);
 
 /**
  * @openapi
@@ -126,7 +126,7 @@ router.get('/', authorize('Admin', 'SuperAdmin', 'Accountant'), listPayments);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/:id', authorize('Admin', 'SuperAdmin', 'Accountant'), getPaymentById);
+router.get('/:id', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), getPaymentById);
 
 /**
  * @openapi
