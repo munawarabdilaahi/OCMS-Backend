@@ -57,6 +57,334 @@ enum FeeStatus {
   INACTIVE
 }
 
+enum UniversityType {
+  PUBLIC
+  PRIVATE
+  CHARTERED
+  FAITH_BASED
+  OTHER
+}
+
+enum UniversityStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum CampusType {
+  MAIN
+  BRANCH
+  VIRTUAL
+  SATELLITE
+  OTHER
+}
+
+enum CampusStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum FacultyStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum DepartmentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum ProgramStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AcademicYearStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SemesterStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LevelStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CourseCategoryStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CourseTypeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  GRADUATED
+  WITHDRAWN
+  DELETED
+}
+
+enum TeacherStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  RESIGNED
+  DELETED
+}
+
+enum SectionStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  DROPPED
+  COMPLETED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  COMPLETED
+  PENDING
+  FAILED
+  REFUNDED
+}
+
+model University {
+  id                    Int              @id @default(autoincrement())
+  name                  String
+  code                  String           @unique
+  type                  UniversityType   @default(PUBLIC)
+  established_date      DateTime?
+  accreditation_body    String?
+  accreditation_status  String?
+  accreditation_expiry  DateTime?
+  address               String?
+  phone                 String?
+  email                 String?
+  website               String?
+  timezone              String           @default("UTC")
+  locale                String           @default("en")
+  currency              String           @default("USD")
+  logo_url              String?
+  favicon_url           String?
+  primary_color         String?
+  secondary_color       String?
+  contact_person_name   String?
+  contact_person_email  String?
+  contact_person_phone  String?
+  mission_statement     String?
+  vision_statement      String?
+  motto                 String?
+  max_campuses          Int?
+  max_students          Int?
+  status                UniversityStatus @default(ACTIVE)
+  campuses              Campus[]
+  created_at            DateTime         @default(now())
+  updated_at            DateTime         @updatedAt
+
+  @@index([name])
+}
+
+model Campus {
+  id                  Int          @id @default(autoincrement())
+  name                String
+  code                String       @unique
+  type                CampusType   @default(MAIN)
+  established_date    DateTime?
+  address             String?
+  phone               String?
+  email               String?
+  website             String?
+  timezone            String?
+  locale              String?
+  currency            String?
+  campus_director     String?
+  director_email      String?
+  director_phone      String?
+  max_capacity        Int?
+  facilities          Json?
+  accreditation_body  String?
+  accreditation_status String?
+  accreditation_expiry DateTime?
+  operating_hours     String?
+  emergency_contact   String?
+  emergency_phone     String?
+  campus_size         Float?
+  buildings_count     Int?
+  virtual_campus_url  String?
+  parking_capacity    Int?
+  transport_routes    Json?
+  library_hours       String?
+  cafeteria_count     Int?
+  sports_facilities   Json?
+  medical_facilities  String?
+  security_details    String?
+  university_id       Int
+  university          University   @relation(fields: [university_id], references: [id], onDelete: Restrict)
+  status              CampusStatus @default(ACTIVE)
+  faculties           Faculty[]
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+
+  @@unique([name, university_id])
+  @@index([university_id])
+  @@index([status])
+  @@index([type])
+}
+
+model Faculty {
+  id                 Int           @id @default(autoincrement())
+  name               String
+  code               String        @unique
+  established_date   DateTime?
+  description        String?
+  phone              String?
+  email              String?
+  website            String?
+  dean_name          String?
+  dean_email         String?
+  dean_phone         String?
+  office_location    String?
+  office_hours       String?
+  vision             String?
+  mission            String?
+  accreditation_body String?
+  accreditation_status String?
+  accreditation_expiry DateTime?
+  max_departments    Int?
+  student_capacity   Int?
+  facilities         Json?
+  research_areas     Json?
+  campus_id          Int
+  campus             Campus        @relation(fields: [campus_id], references: [id], onDelete: Restrict)
+  status             FacultyStatus @default(ACTIVE)
+  departments        Department[]
+  created_at         DateTime      @default(now())
+  updated_at         DateTime      @updatedAt
+
+  @@unique([name, campus_id])
+  @@index([campus_id])
+  @@index([status])
+  @@index([name])
+}
+
+model Program {
+  id             Int           @id @default(autoincrement())
+  name           String
+  code           String        @unique
+  department_id  Int
+  department     Department    @relation(fields: [department_id], references: [id])
+  duration_years Int?
+  type           String?
+  status         ProgramStatus @default(ACTIVE)
+  levels         Level[]
+  students       Student[]
+  courses        Course[]
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+
+  @@index([department_id])
+}
+
+model AcademicYear {
+  id          Int               @id @default(autoincrement())
+  name        String            @unique
+  start_date  DateTime
+  end_date    DateTime
+  status      AcademicYearStatus @default(ACTIVE)
+  semesters   Semester[]
+  enrollments Enrollment[]
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+}
+
+model Semester {
+  id              Int            @id @default(autoincrement())
+  name            String
+  academic_year_id Int
+  academic_year   AcademicYear   @relation(fields: [academic_year_id], references: [id])
+  start_date      DateTime
+  end_date        DateTime
+  status          SemesterStatus @default(ACTIVE)
+  sections        Section[]
+  enrollments     Enrollment[]
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+
+  @@index([academic_year_id])
+}
+
+model Level {
+  id         Int         @id @default(autoincrement())
+  name       String
+  code       String      @unique
+  program_id Int
+  program    Program     @relation(fields: [program_id], references: [id])
+  sort_order Int         @default(0)
+  status     LevelStatus @default(ACTIVE)
+  students   Student[]
+  courses    Course[]
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+
+  @@index([program_id])
+}
+
+model CourseCategory {
+  id          Int                 @id @default(autoincrement())
+  name        String              @unique
+  code        String?             @unique
+  description String?
+  status      CourseCategoryStatus @default(ACTIVE)
+  courses     Course[]
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+}
+
+model CourseType {
+  id          Int               @id @default(autoincrement())
+  name        String            @unique
+  code        String?           @unique
+  description String?
+  status      CourseTypeStatus  @default(ACTIVE)
+  courses     Course[]
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+}
+
 model Role {
   id          Int      @id @default(autoincrement())
   name        String   @unique
@@ -72,7 +400,7 @@ model User {
   email              String               @unique
   password           String
   phone              String?
-  status             String               @default("ACTIVE")
+  status             UserStatus           @default(ACTIVE)
   role_id            Int
   role               Role                 @relation(fields: [role_id], references: [id])
   student            Student?
@@ -91,15 +419,39 @@ model User {
 }
 
 model Department {
-  id             Int            @id @default(autoincrement())
-  code           String?        @unique
-  name           String
-  students       Student[]
-  teachers       Teacher[]
-  courses        Course[]
-  fee_structures FeeStructure[]
-  created_at     DateTime       @default(now())
-  updated_at     DateTime       @updatedAt
+  id                  Int              @id @default(autoincrement())
+  code                String           @unique
+  name                String
+  description         String?
+  phone               String?
+  email               String?
+  office_location     String?
+  established_date    DateTime?
+  vision              String?
+  mission             String?
+  hod_name            String?
+  hod_email           String?
+  hod_phone           String?
+  max_programs        Int?
+  max_teachers        Int?
+  student_capacity    Int?
+  facilities          Json?
+  research_areas      Json?
+  faculty_id          Int
+  faculty             Faculty          @relation(fields: [faculty_id], references: [id], onDelete: Restrict)
+  status              DepartmentStatus @default(ACTIVE)
+  students            Student[]
+  teachers            Teacher[]
+  courses             Course[]
+  programs            Program[]
+  fee_structures      FeeStructure[]
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @updatedAt
+
+  @@unique([name, faculty_id])
+  @@index([faculty_id])
+  @@index([status])
+  @@index([name])
 }
 
 model Student {
@@ -108,19 +460,25 @@ model Student {
   user          User         @relation(fields: [user_id], references: [id])
   department_id Int
   department    Department   @relation(fields: [department_id], references: [id])
+  program_id    Int?
+  program       Program?     @relation(fields: [program_id], references: [id])
+  level_id      Int?
+  level         Level?       @relation(fields: [level_id], references: [id])
   admission_no  String?      @unique
   date_of_birth DateTime?
   gender        Gender?
   address       String?
-  status        String       @default("ACTIVE")
+  status        StudentStatus @default(ACTIVE)
   results       ExamResult[]
   attendances   Attendance[]
   enrollments   Enrollment[]
   invoices      Invoice[]
-  created_at    DateTime     @default(now())
-  updated_at    DateTime     @updatedAt
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
 
   @@index([department_id])
+  @@index([program_id])
+  @@index([level_id])
 }
 
 model Teacher {
@@ -135,11 +493,12 @@ model Teacher {
   employment_date DateTime?
   gender          Gender?
   address         String?
-  status          String       @default("ACTIVE")
+  status          TeacherStatus @default(ACTIVE)
   courses         Course[]
+  sections        Section[]
   attendances     Attendance[]
-  created_at      DateTime     @default(now())
-  updated_at      DateTime     @updatedAt
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
 
   @@index([department_id])
 }
@@ -153,6 +512,14 @@ model Course {
   status         CourseStatus   @default(ACTIVE)
   department_id  Int?
   department     Department?    @relation(fields: [department_id], references: [id])
+  program_id     Int?
+  program        Program?       @relation(fields: [program_id], references: [id])
+  level_id       Int?
+  level          Level?         @relation(fields: [level_id], references: [id])
+  category_id    Int?
+  category       CourseCategory? @relation(fields: [category_id], references: [id])
+  type_id        Int?
+  type           CourseType?     @relation(fields: [type_id], references: [id])
   teacher_id     Int?
   teacher        Teacher?       @relation(fields: [teacher_id], references: [id])
   attendances    Attendance[]
@@ -160,11 +527,51 @@ model Course {
   exam_results   ExamResult[]
   course_exams   CourseExam[]
   enrollments    Enrollment[]
+  prerequisites  CoursePrerequisite[] @relation("CoursePrerequisite")
+  prerequisites_for CoursePrerequisite[] @relation("CoursePrerequisiteReverse")
+  sections       Section[]
   created_at     DateTime       @default(now())
   updated_at     DateTime       @updatedAt
 
   @@index([department_id])
+  @@index([program_id])
+  @@index([level_id])
+  @@index([category_id])
+  @@index([type_id])
   @@index([teacher_id])
+}
+
+model Section {
+  id          Int          @id @default(autoincrement())
+  course_id   Int
+  course      Course       @relation(fields: [course_id], references: [id])
+  teacher_id  Int?
+  teacher     Teacher?     @relation(fields: [teacher_id], references: [id])
+  semester_id Int?
+  semester    Semester?    @relation(fields: [semester_id], references: [id])
+  room        String?
+  capacity    Int          @default(30)
+  schedule    String?
+  status      SectionStatus @default(ACTIVE)
+  enrollments Enrollment[]
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+
+  @@index([course_id])
+  @@index([teacher_id])
+  @@index([semester_id])
+}
+
+model CoursePrerequisite {
+  id                     Int    @id @default(autoincrement())
+  course_id              Int
+  course                 Course @relation("CoursePrerequisite", fields: [course_id], references: [id])
+  prerequisite_course_id Int
+  prerequisite_course    Course @relation("CoursePrerequisiteReverse", fields: [prerequisite_course_id], references: [id])
+
+  @@unique([course_id, prerequisite_course_id])
+  @@index([course_id])
+  @@index([prerequisite_course_id])
 }
 
 model ExamSchedule {
@@ -242,18 +649,32 @@ model Attendance {
 }
 
 model Enrollment {
-  id         Int      @id @default(autoincrement())
-  student_id Int
-  student    Student  @relation(fields: [student_id], references: [id])
-  course_id  Int
-  course     Course   @relation(fields: [course_id], references: [id])
-  status     String   @default("ACTIVE")
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id               Int          @id @default(autoincrement())
+  student_id       Int
+  student          Student      @relation(fields: [student_id], references: [id])
+  course_id        Int
+  course           Course       @relation(fields: [course_id], references: [id])
+  semester_id      Int?
+  semester         Semester?    @relation(fields: [semester_id], references: [id])
+  academic_year_id Int?
+  academic_year    AcademicYear? @relation(fields: [academic_year_id], references: [id])
+  section_id       Int?
+  section          Section?     @relation(fields: [section_id], references: [id])
+  enrollment_date  DateTime     @default(now())
+  drop_date        DateTime?
+  grade_attempt    Int          @default(1)
+  is_repeated      Boolean      @default(false)
+  is_improvement   Boolean      @default(false)
+  status           EnrollmentStatus @default(ACTIVE)
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
 
-  @@unique([student_id, course_id])
+  @@unique([student_id, course_id, semester_id])
   @@index([student_id])
   @@index([course_id])
+  @@index([semester_id])
+  @@index([academic_year_id])
+  @@index([section_id])
 }
 
 model FeeStructure {
@@ -283,7 +704,7 @@ model Invoice {
   amount           Decimal
   paid_amount      Decimal       @default(0)
   balance          Decimal
-  status           String        @default("Pending")
+  status           InvoiceStatus @default(PENDING)
   due_date         DateTime
   academic_year    String?
   semester         String?
@@ -303,7 +724,7 @@ model Payment {
   amount           Decimal
   payment_method   PaymentMethod
   reference_number String?
-  status           String        @default("Completed")
+  status           PaymentStatus @default(COMPLETED)
   notes            String?
   recorded_by      Int?
   transactions     Transaction[]

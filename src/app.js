@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
@@ -17,6 +18,13 @@ import invoiceRoutes from './routes/invoice.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import enrollmentRoutes from './routes/enrollment.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
+import universityRoutes from './routes/university.routes.js';
+import campusRoutes from './routes/campus.routes.js';
+import facultyRoutes from './routes/faculty.routes.js';
+import programRoutes from './routes/program.routes.js';
+import academicYearRoutes from './routes/academic-year.routes.js';
+import semesterRoutes from './routes/semester.routes.js';
+import levelRoutes from './routes/level.routes.js';
 import { errorHandler, notFound } from './middlewares/error.middleware.js';
 import { globalLimiter } from './middlewares/rateLimit.middleware.js';
 import { sanitize } from './middlewares/sanitize.middleware.js';
@@ -79,6 +87,7 @@ export function createApp() {
     }, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
     app.use(globalLimiter);
+    app.use(cookieParser());
     app.use(express.json({ limit: '1mb' }));
     app.use(express.urlencoded({ extended: true, limit: '1mb' }));
     app.use(sanitize);
@@ -109,6 +118,13 @@ export function createApp() {
     app.use('/api/payments', paymentRoutes);
     app.use('/api/enrollments', enrollmentRoutes);
     app.use('/api/dashboard', dashboardRoutes);
+    app.use('/api/universities', universityRoutes);
+    app.use('/api/campuses', campusRoutes);
+    app.use('/api/faculties', facultyRoutes);
+    app.use('/api/programs', programRoutes);
+    app.use('/api/academic-years', academicYearRoutes);
+    app.use('/api/semesters', semesterRoutes);
+    app.use('/api/levels', levelRoutes);
 
     app.use(notFound);
     app.use(errorHandler);
