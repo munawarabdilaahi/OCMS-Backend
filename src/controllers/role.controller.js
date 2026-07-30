@@ -1,3 +1,4 @@
+import { requireAdmin } from '../utils/rbac.js';
 import { listRoles as listRolesService, getRoleById as getRoleByIdService, createRole as createRoleService, updateRole as updateRoleService, deleteRole as deleteRoleService } from '../services/role.service.js';
 
 export async function listRoles(req, res, next) {
@@ -21,6 +22,7 @@ export async function getRoleById(req, res, next) {
 
 export async function createRole(req, res, next) {
     try {
+        requireAdmin(req.user);
         const role = await createRoleService(req.body);
         return res.status(201).json({ success: true, message: 'Role created successfully.', data: role });
     } catch (error) {
@@ -30,6 +32,7 @@ export async function createRole(req, res, next) {
 
 export async function updateRole(req, res, next) {
     try {
+        requireAdmin(req.user);
         const role = await updateRoleService(req.params.id, req.body);
         return res.status(200).json({ success: true, message: 'Role updated successfully.', data: role });
     } catch (error) {
@@ -39,6 +42,7 @@ export async function updateRole(req, res, next) {
 
 export async function deleteRole(req, res, next) {
     try {
+        requireAdmin(req.user);
         await deleteRoleService(req.params.id);
         return res.status(200).json({ success: true, message: 'Role deleted successfully.' });
     } catch (error) {

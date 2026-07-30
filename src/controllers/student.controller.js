@@ -1,8 +1,10 @@
 import { buildPaginationMeta } from '../utils/pagination.js';
+import { requireAdmin } from '../utils/rbac.js';
 import { serializeStudent, createStudent as createStudentService, getStudents as getStudentsService, getStudentById as getStudentByIdService, deleteStudent as deleteStudentService, updateStudentStatus as updateStudentStatusService, updateStudent as updateStudentService, getStudentStats as getStudentStatsService } from '../services/student.service.js';
 
 export async function createStudent(req, res, next) {
     try {
+        requireAdmin(req.user);
         const student = await createStudentService(req.body);
         return res.status(201).json({
             success: true,

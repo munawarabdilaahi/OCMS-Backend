@@ -1,5 +1,30 @@
 import { serializeUser, getMe as getMeService, register as registerService, login as loginService, refreshToken as refreshTokenService, logout as logoutService, forgotPassword as forgotPasswordService, resetPassword as resetPasswordService, generateEmailVerification as generateEmailVerificationService, verifyEmail as verifyEmailService, getSessions as getSessionsService, revokeSession as revokeSessionService, revokeAllSessions as revokeAllSessionsService } from '../services/auth.service.js';
-import prisma from '../config/db.js';
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+const COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    path: '/',
+};
+
+function setAuthCookies(res, accessToken, refreshToken) {
+    res.cookie('access_token', accessToken, {
+        ...COOKIE_OPTIONS,
+        maxAge: 15 * 60 * 1000,
+    });
+    res.cookie('refresh_token', refreshToken, {
+        ...COOKIE_OPTIONS,
+        path: '/api/auth',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+}
+
+function clearAuthCookies(res) {
+    res.clearCookie('access_token', { ...COOKIE_OPTIONS });
+    res.clearCookie('refresh_token', { ...COOKIE_OPTIONS, path: '/api/auth' });
+}
 
 export async function getMe(req, res, next) {
     try {
@@ -13,22 +38,11 @@ export async function getMe(req, res, next) {
 export async function register(req, res, next) {
     try {
         const { user, accessToken, refreshToken } = await registerService(req.body, req.headers, req.ip);
-        prisma.auditLog.create({
-            data: {
-                user_id: user.id,
-                action: 'REGISTER',
-                resource: '/auth/register',
-                method: 'POST',
-                status_code: 201,
-                ip_address: req.ip,
-                user_agent: req.headers['user-agent'] || null,
-                metadata: { email: user.email },
-            },
-        }).catch(() => {});
+        setAuthCookies(res, accessToken, refreshToken);
         return res.status(201).json({
             success: true,
             message: 'User registered successfully.',
-            data: { token: accessToken, refreshToken, user: serializeUser(user) },
+            data: { user: serializeUser(user) },
         });
     } catch (error) {
         next(error);
@@ -38,21 +52,11 @@ export async function register(req, res, next) {
 export async function login(req, res, next) {
     try {
         const { user, accessToken, refreshToken } = await loginService(req.body, req.headers, req.ip);
-        prisma.auditLog.create({
-            data: {
-                user_id: user.id,
-                action: 'LOGIN',
-                resource: '/auth/login',
-                method: 'POST',
-                status_code: 200,
-                ip_address: req.ip,
-                user_agent: req.headers['user-agent'] || null,
-            },
-        }).catch(() => {});
+        setAuthCookies(res, accessToken, refreshToken);
         return res.status(200).json({
             success: true,
             message: 'Login successful.',
-            data: { token: accessToken, refreshToken, user: serializeUser(user) },
+            data: { user: serializeUser(user) },
         });
     } catch (error) {
         next(error);
@@ -61,8 +65,13 @@ export async function login(req, res, next) {
 
 export async function refreshToken(req, res, next) {
     try {
-        const tokens = await refreshTokenService(req.body.refreshToken, req.headers, req.ip);
-        return res.status(200).json({ success: true, data: tokens });
+        const refreshTokenValue = req.body.refreshToken || req.cookies?.refresh_token;
+        if (!refreshTokenValue) {
+            return res.status(401).json({ success: false, message: 'Refresh token required.' });
+        }
+        const tokens = await refreshTokenService(refreshTokenValue, req.headers, req.ip);
+        setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+        return res.status(200).json({ success: true, message: 'Token refreshed successfully.' });
     } catch (error) {
         next(error);
     }
@@ -70,7 +79,9 @@ export async function refreshToken(req, res, next) {
 
 export async function logout(req, res, next) {
     try {
-        await logoutService(req.body.refreshToken, req.user?.id);
+        const refreshTokenValue = req.body.refreshToken || req.cookies?.refresh_token;
+        await logoutService(refreshTokenValue, req.user?.id);
+        clearAuthCookies(res);
         return res.status(200).json({ success: true, message: 'Logged out successfully.' });
     } catch (error) {
         next(error);

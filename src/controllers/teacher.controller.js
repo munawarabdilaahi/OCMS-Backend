@@ -1,8 +1,10 @@
 import { buildPaginationMeta } from '../utils/pagination.js';
+import { requireAdmin } from '../utils/rbac.js';
 import { serializeTeacher, getTeacherById as getTeacherByIdService, getTeachers as getTeachersService, deleteTeacher as deleteTeacherService, createTeacher as createTeacherService, updateTeacher as updateTeacherService } from '../services/teacher.service.js';
 
 export async function createTeacher(req, res, next) {
     try {
+        requireAdmin(req.user);
         const teacher = await createTeacherService(req.body);
         return res.status(201).json({ success: true, message: 'Teacher created successfully.', data: serializeTeacher(teacher) });
     } catch (error) {
@@ -42,6 +44,7 @@ export async function getTeacherById(req, res, next) {
 
 export async function updateTeacher(req, res, next) {
     try {
+        requireAdmin(req.user);
         const teacher = await updateTeacherService(req.params.id, req.body);
         return res.status(200).json({ success: true, message: 'Teacher updated successfully.', data: serializeTeacher(teacher) });
     } catch (error) {
@@ -51,6 +54,7 @@ export async function updateTeacher(req, res, next) {
 
 export async function deleteTeacher(req, res, next) {
     try {
+        requireAdmin(req.user);
         await deleteTeacherService(req.params.id);
         return res.status(200).json({ success: true, message: 'Teacher deleted successfully.' });
     } catch (error) {
