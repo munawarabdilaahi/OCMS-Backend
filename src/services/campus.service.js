@@ -135,7 +135,7 @@ export async function createCampus(data) {
     }
 
     const existingName = await prisma.campus.findFirst({
-        where: { name: { equals: name, mode: 'insensitive' }, university_id: university.id },
+        where: { name: { equals: name }, university_id: university.id },
     });
     if (existingName) {
         const error = new Error('A campus with this name already exists in this university.');
@@ -219,7 +219,7 @@ export async function updateCampus(id, data) {
 
     if (data.name) {
         const conflict = await prisma.campus.findFirst({
-            where: { name: { equals: data.name, mode: 'insensitive' }, university_id: existing.university_id, id: { not: campusId } },
+            where: { name: { equals: data.name }, university_id: existing.university_id, id: { not: campusId } },
         });
         if (conflict) {
             const error = new Error('A campus with this name already exists in this university.');
@@ -230,7 +230,7 @@ export async function updateCampus(id, data) {
 
     if (data.code) {
         const conflict = await prisma.campus.findFirst({
-            where: { code: { equals: data.code, mode: 'insensitive' }, id: { not: campusId } },
+            where: { code: { equals: data.code }, id: { not: campusId } },
         });
         if (conflict) {
             const error = new Error('A campus with this code already exists.');

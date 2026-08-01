@@ -127,7 +127,7 @@ export async function createDepartment(data) {
     }
 
     const existingName = await prisma.department.findFirst({
-        where: { name: { equals: name, mode: 'insensitive' }, faculty_id: faculty.id },
+        where: { name: { equals: name }, faculty_id: faculty.id },
     });
     if (existingName) {
         const error = new Error('A department with this name already exists in this faculty.');
@@ -196,7 +196,7 @@ export async function updateDepartment(id, data) {
 
     if (data.name) {
         const conflict = await prisma.department.findFirst({
-            where: { name: { equals: data.name, mode: 'insensitive' }, faculty_id: existing.faculty_id, id: { not: departmentId } },
+            where: { name: { equals: data.name }, faculty_id: existing.faculty_id, id: { not: departmentId } },
         });
         if (conflict) {
             const error = new Error('A department with this name already exists in this faculty.');
@@ -207,7 +207,7 @@ export async function updateDepartment(id, data) {
 
     if (data.code) {
         const conflict = await prisma.department.findFirst({
-            where: { code: { equals: data.code, mode: 'insensitive' }, id: { not: departmentId } },
+            where: { code: { equals: data.code }, id: { not: departmentId } },
         });
         if (conflict) {
             const error = new Error('A department with this code already exists.');

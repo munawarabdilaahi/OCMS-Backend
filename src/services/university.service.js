@@ -1,6 +1,8 @@
 import prisma from '../config/db.js';
 import { getPaginationParams } from '../utils/pagination.js';
 
+const MAX_INT = 2147483647;
+
 function parseValidDate(value) {
     const date = new Date(value);
     if (isNaN(date.getTime())) {
@@ -9,6 +11,17 @@ function parseValidDate(value) {
         throw error;
     }
     return date;
+}
+
+function parseOptionalInt(value, label) {
+    if (value === undefined || value === null || value === '') return undefined;
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 1 || n > MAX_INT) {
+        const error = new Error(`${label} must be a positive whole number up to ${MAX_INT}.`);
+        error.statusCode = 400;
+        throw error;
+    }
+    return n;
 }
 
 const VALID_TRANSITIONS = {
@@ -112,8 +125,8 @@ export async function createUniversity(data) {
     const existing = await prisma.university.findFirst({
         where: {
             OR: [
-                { name: { equals: name, mode: 'insensitive' } },
-                ...(code ? [{ code: { equals: code, mode: 'insensitive' } }] : []),
+                { name: { equals: name } },
+                ...(code ? [{ code: { equals: code } }] : []),
             ],
         },
     });
@@ -162,8 +175,8 @@ export async function createUniversity(data) {
             mission_statement: data.mission_statement || undefined,
             vision_statement: data.vision_statement || undefined,
             motto: data.motto || undefined,
-            max_campuses: data.max_campuses !== undefined && data.max_campuses !== '' ? Number(data.max_campuses) : undefined,
-            max_students: data.max_students !== undefined && data.max_students !== '' ? Number(data.max_students) : undefined,
+            max_campuses: parseOptionalInt(data.max_campuses, 'max_campuses'),
+            max_students: parseOptionalInt(data.max_students, 'max_students'),
             status: data.status || 'ACTIVE',
         },
     });
@@ -183,7 +196,7 @@ export async function updateUniversity(id, data) {
 
     if (data.name) {
         const conflict = await prisma.university.findFirst({
-            where: { name: { equals: data.name, mode: 'insensitive' }, id: { not: universityId } },
+            where: { name: { equals: data.name }, id: { not: universityId } },
         });
         if (conflict) {
             const error = new Error('A university with this name already exists.');
@@ -194,7 +207,7 @@ export async function updateUniversity(id, data) {
 
     if (data.code) {
         const conflict = await prisma.university.findFirst({
-            where: { code: { equals: data.code, mode: 'insensitive' }, id: { not: universityId } },
+            where: { code: { equals: data.code }, id: { not: universityId } },
         });
         if (conflict) {
             const error = new Error('A university with this code already exists.');
@@ -231,7 +244,7 @@ export async function updateUniversity(id, data) {
     for (const field of fields) {
         if (data[field] !== undefined) {
             if (field === 'max_campuses' || field === 'max_students') {
-                updateData[field] = Number(data[field]);
+                updateData[field] = parseOptionalInt(data[field], field);
             } else {
                 updateData[field] = data[field];
             }

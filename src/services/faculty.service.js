@@ -128,7 +128,7 @@ export async function createFaculty(data) {
     }
 
     const existingName = await prisma.faculty.findFirst({
-        where: { name: { equals: name, mode: 'insensitive' }, campus_id: campus.id },
+        where: { name: { equals: name }, campus_id: campus.id },
     });
     if (existingName) {
         const error = new Error('A faculty with this name already exists in this campus.');
@@ -195,7 +195,7 @@ export async function updateFaculty(id, data) {
 
     if (data.name) {
         const conflict = await prisma.faculty.findFirst({
-            where: { name: { equals: data.name, mode: 'insensitive' }, campus_id: existing.campus_id, id: { not: facultyId } },
+            where: { name: { equals: data.name }, campus_id: existing.campus_id, id: { not: facultyId } },
         });
         if (conflict) {
             const error = new Error('A faculty with this name already exists in this campus.');
@@ -206,7 +206,7 @@ export async function updateFaculty(id, data) {
 
     if (data.code) {
         const conflict = await prisma.faculty.findFirst({
-            where: { code: { equals: data.code, mode: 'insensitive' }, id: { not: facultyId } },
+            where: { code: { equals: data.code }, id: { not: facultyId } },
         });
         if (conflict) {
             const error = new Error('A faculty with this code already exists.');
