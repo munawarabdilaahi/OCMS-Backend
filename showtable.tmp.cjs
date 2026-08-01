@@ -1,0 +1,1 @@
+const {PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.$queryRawUnsafe('SHOW CREATE TABLE university').then(r=>{console.log(JSON.stringify(r));p.$disconnect()}).catch(e=>{console.error(e.message);p.$disconnect()})
