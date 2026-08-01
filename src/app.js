@@ -25,6 +25,7 @@ import programRoutes from './routes/program.routes.js';
 import academicYearRoutes from './routes/academic-year.routes.js';
 import semesterRoutes from './routes/semester.routes.js';
 import levelRoutes from './routes/level.routes.js';
+import auditLogRoutes from './routes/audit-log.routes.js';
 import { errorHandler, notFound } from './middlewares/error.middleware.js';
 import { globalLimiter } from './middlewares/rateLimit.middleware.js';
 import { sanitize } from './middlewares/sanitize.middleware.js';
@@ -125,6 +126,7 @@ export function createApp() {
     app.use('/api/academic-years', academicYearRoutes);
     app.use('/api/semesters', semesterRoutes);
     app.use('/api/levels', levelRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
     app.use(notFound);
     app.use(errorHandler);
