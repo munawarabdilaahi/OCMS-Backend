@@ -33,7 +33,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/admin', authorize('Admin', 'SuperAdmin'), getAdminDashboard);
+router.get('/admin', authorize('Admin', 'SuperAdmin', 'Registrar', 'Accountant'), getAdminDashboard);
 
 /**
  * @openapi

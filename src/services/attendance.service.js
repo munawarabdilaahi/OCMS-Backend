@@ -173,7 +173,7 @@ export async function updateAttendance(id, data, user) {
     }
 
     const teacherInfo = await getTeacherCourseIds(user);
-    if (teacherInfo !== null && !teacherInfo.courseIds.includes(existing.course_id)) {
+    if (teacherInfo !== null && !teacherInfo.includes(existing.course_id)) {
         const error = new Error('Access denied. You can only update attendance for your assigned courses.');
         error.statusCode = 403;
         throw error;
@@ -201,7 +201,7 @@ export async function deleteAttendance(id, user) {
     }
 
     const teacherInfo = await getTeacherCourseIds(user);
-    if (teacherInfo !== null && !teacherInfo.courseIds.includes(existing.course_id)) {
+    if (teacherInfo !== null && !teacherInfo.includes(existing.course_id)) {
         const error = new Error('Access denied. You can only delete attendance for your assigned courses.');
         error.statusCode = 403;
         throw error;
@@ -218,7 +218,7 @@ export async function bulkCreateAttendance(data, user) {
     const resolvedDate = new Date(date);
 
     const teacherInfo = await getTeacherCourseIds(user);
-    if (teacherInfo !== null && !teacherInfo.courseIds.includes(resolvedCourseId)) {
+    if (teacherInfo !== null && !teacherInfo.includes(resolvedCourseId)) {
         const error = new Error('Access denied. You can only manage attendance for your assigned courses.');
         error.statusCode = 403;
         throw error;
