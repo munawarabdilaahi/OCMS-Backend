@@ -34,7 +34,11 @@ export function serializeUser(user) {
 }
 
 function userInclude() {
-    return { role: true };
+    return {
+        role: true,
+        student: { select: { id: true, admission_no: true, department_id: true } },
+        teacher: { select: { id: true, employee_no: true, department_id: true } },
+    };
 }
 
 async function createSession(user, userAgent, ipAddress) {
@@ -79,7 +83,7 @@ function signAccessToken(user) {
 
 function signRefreshToken(userId, sessionId) {
     return jwt.sign(
-        { id: userId, sid: sessionId, type: 'refresh' },
+        { id: userId, sid: sessionId, type: 'refresh', jti: crypto.randomUUID() },
         process.env.JWT_REFRESH_SECRET,
         { expiresIn: JWT_REFRESH_EXPIRES_IN, algorithm: JWT_ALGORITHM }
     );

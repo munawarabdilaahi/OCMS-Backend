@@ -15,7 +15,7 @@ import {
 } from '../controllers/auth.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
 import { auditLog } from '../middlewares/audit.middleware.js';
-import { authLimiter } from '../middlewares/rateLimit.middleware.js';
+import { authLimiter, refreshLimiter } from '../middlewares/rateLimit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, verifyEmailSchema, refreshTokenSchema } from '../validators/auth.validator.js';
 
@@ -199,7 +199,7 @@ router.post('/reset-password', authLimiter, auditLog('RESET_PASSWORD'), validate
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/refresh-token', authLimiter, auditLog('REFRESH_TOKEN'), validate(refreshTokenSchema), refreshToken);
+router.post('/refresh-token', refreshLimiter, auditLog('REFRESH_TOKEN'), validate(refreshTokenSchema), refreshToken);
 
 /**
  * @openapi
