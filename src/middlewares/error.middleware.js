@@ -17,6 +17,10 @@ export function errorHandler(error, req, res, _next) {
     } else if (error.code === 'P2025') {
         statusCode = 404;
         message = 'The requested record was not found.';
+    } else if (error.code === 'P2000') {
+        statusCode = 400;
+        const column = error.meta?.column_name ?? error.meta?.column ?? '';
+        message = column ? `The value provided for "${column}" is too long.` : 'One or more provided values are too long for their columns.';
     } else if (error.code === 'P2003') {
         statusCode = 400;
         message = 'Related record not found. Check that referenced IDs are valid.';

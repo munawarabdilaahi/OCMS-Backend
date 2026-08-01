@@ -4,10 +4,11 @@ export function validate(schema) {
     return (req, res, next) => {
         const result = schema.safeParse(req.body);
         if (!result.success) {
-            const error = result.error.errors[0];
+            const firstError = result.error.issues?.[0] ?? result.error.errors?.[0];
+            const message = firstError?.message || 'Invalid request data.';
             return res.status(400).json({
                 success: false,
-                message: error.message,
+                message,
             });
         }
         req.body = result.data;
