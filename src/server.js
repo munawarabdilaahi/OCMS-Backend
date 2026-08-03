@@ -39,13 +39,15 @@ if (process.env.NODE_ENV === 'production') {
 const app = createApp();
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT);
+
+server.on('listening', () => {
     console.log(`OCMS API listening on port ${PORT}`);
 });
 
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-        console.error(`FATAL: Port ${PORT} is already in use by another process.`);
+        console.error(`FATAL: Port ${PORT} is already in use by another process. (${err.message})`);
     } else {
         console.error(`FATAL: Failed to start server: ${err.message}`);
     }

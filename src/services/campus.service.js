@@ -11,6 +11,19 @@ function parseValidDate(value) {
     return date;
 }
 
+export function parseJsonField(value, fieldName) {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== 'string') return value;
+    if (value.trim() === '') return null;
+    try {
+        return JSON.parse(value);
+    } catch {
+        const error = new Error(`${fieldName} must contain valid JSON.`);
+        error.statusCode = 400;
+        throw error;
+    }
+}
+
 const VALID_TRANSITIONS = {
     ACTIVE: ['INACTIVE', 'SUSPENDED'],
     INACTIVE: ['ACTIVE'],
@@ -178,7 +191,7 @@ export async function createCampus(data) {
             director_email: data.director_email || undefined,
             director_phone: data.director_phone || undefined,
             max_capacity: data.max_capacity !== undefined && data.max_capacity !== '' ? Number(data.max_capacity) : undefined,
-            facilities: data.facilities !== undefined ? (typeof data.facilities === 'string' ? JSON.parse(data.facilities) : data.facilities) : undefined,
+            facilities: parseJsonField(data.facilities, 'facilities'),
             accreditation_body: data.accreditation_body || undefined,
             accreditation_status: data.accreditation_status || undefined,
             accreditation_expiry: data.accreditation_expiry && data.accreditation_expiry !== '' ? parseValidDate(data.accreditation_expiry) : undefined,
@@ -189,10 +202,10 @@ export async function createCampus(data) {
             buildings_count: data.buildings_count !== undefined && data.buildings_count !== '' ? Number(data.buildings_count) : undefined,
             virtual_campus_url: data.virtual_campus_url || undefined,
             parking_capacity: data.parking_capacity !== undefined && data.parking_capacity !== '' ? Number(data.parking_capacity) : undefined,
-            transport_routes: data.transport_routes !== undefined ? (typeof data.transport_routes === 'string' ? JSON.parse(data.transport_routes) : data.transport_routes) : undefined,
+            transport_routes: parseJsonField(data.transport_routes, 'transport_routes'),
             library_hours: data.library_hours || undefined,
             cafeteria_count: data.cafeteria_count !== undefined && data.cafeteria_count !== '' ? Number(data.cafeteria_count) : undefined,
-            sports_facilities: data.sports_facilities !== undefined ? (typeof data.sports_facilities === 'string' ? JSON.parse(data.sports_facilities) : data.sports_facilities) : undefined,
+            sports_facilities: parseJsonField(data.sports_facilities, 'sports_facilities'),
             medical_facilities: data.medical_facilities || undefined,
             security_details: data.security_details || undefined,
             university_id: university.id,
@@ -313,7 +326,7 @@ export async function updateCampus(id, data) {
     const jsonFields = ['facilities', 'transport_routes', 'sports_facilities'];
     for (const field of jsonFields) {
         if (data[field] !== undefined) {
-            updateData[field] = typeof data[field] === 'string' ? JSON.parse(data[field]) : data[field];
+            updateData[field] = parseJsonField(data[field], field);
         }
     }
 
