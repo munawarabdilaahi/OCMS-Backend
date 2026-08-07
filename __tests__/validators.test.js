@@ -23,13 +23,13 @@ describe('loginSchema', () => {
 
 describe('registerSchema', () => {
     it('accepts valid registration', () => {
-        expect(registerSchema.safeParse({ name: 'New', email: 'new@ocms.edu', password: 'StrongPass1', role: 'Student' }).success).toBe(true);
+        expect(registerSchema.safeParse({ name: 'New', email: 'new@ocms.edu', password: 'StrongPass1!', role: 'Student' }).success).toBe(true);
     });
     it('rejects weak password', () => {
-        expect(registerSchema.safeParse({ name: 'New', email: 'new@ocms.edu', password: 'weak', role: 'Student' }).success).toBe(false);
+        expect(registerSchema.safeParse({ name: 'New', email: 'new@ocms.edu', password: 'weak!', role: 'Student' }).success).toBe(false);
     });
     it('rejects missing name', () => {
-        expect(registerSchema.safeParse({ email: 'new@ocms.edu', password: 'StrongPass1' }).success).toBe(false);
+        expect(registerSchema.safeParse({ email: 'new@ocms.edu', password: 'StrongPass1!' }).success).toBe(false);
     });
 });
 
@@ -44,11 +44,11 @@ describe('forgotPasswordSchema', () => {
 
 describe('resetPasswordSchema', () => {
     it('accepts valid reset data', () => {
-        const result = resetPasswordSchema.safeParse({ token: 'abc123', password: 'NewPass1', confirmPassword: 'NewPass1' });
+        const result = resetPasswordSchema.safeParse({ token: 'abc123', password: 'NewPass1!', confirmPassword: 'NewPass1!' });
         expect(result.success).toBe(true);
     });
     it('rejects mismatched passwords', () => {
-        const result = resetPasswordSchema.safeParse({ token: 'abc123', password: 'NewPass1', confirmPassword: 'Different1' });
+        const result = resetPasswordSchema.safeParse({ token: 'abc123', password: 'NewPass1!', confirmPassword: 'Different1!' });
         expect(result.success).toBe(false);
     });
 });
@@ -107,7 +107,7 @@ describe('updateStudentStatusSchema', () => {
 
 describe('createDepartmentSchema', () => {
     it('accepts valid department', () => {
-        expect(createDepartmentSchema.safeParse({ name: 'Computer Science', code: 'CS' }).success).toBe(true);
+        expect(createDepartmentSchema.safeParse({ name: 'Computer Science', code: 'CS', faculty_id: 1 }).success).toBe(true);
     });
     it('rejects empty name', () => {
         expect(createDepartmentSchema.safeParse({ name: '' }).success).toBe(false);
