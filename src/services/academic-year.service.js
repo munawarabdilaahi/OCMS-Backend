@@ -1,5 +1,8 @@
 import prisma from '../config/db.js';
 import { getPaginationParams } from '../utils/pagination.js';
+import { getCached, invalidateCache } from '../utils/cache.js';
+
+const REF_CACHE_TTL = 5 * 60 * 1000;
 
 export function serializeAcademicYear(a) {
     return {
@@ -17,23 +20,22 @@ export async function listAcademicYears(query) {
     const { page, limit, skip } = getPaginationParams(query);
     const search = query.search?.trim();
 
-    const where = {
-        ...(search
-            ? {
-                OR: [
-                    { name: { contains: search } },
-                ],
-            }
-            : {}),
-    };
+    const cacheKey = `academicYears:${page}:${limit}:${search || ''}`;
+
+    if (!search) {
+        return getCached(cacheKey, REF_CACHE_TTL, async () => {
+            const [academicYears, total] = await Promise.all([
+                prisma.academicYear.findMany({ skip, take: limit, orderBy: { name: 'asc' } }),
+                prisma.academicYear.count(),
+            ]);
+            return { academicYears, total, page, limit };
+        });
+    }
+
+    const where = { OR: [{ name: { contains: search } }] };
 
     const [academicYears, total] = await Promise.all([
-        prisma.academicYear.findMany({
-            where,
-            skip,
-            take: limit,
-            orderBy: { name: 'asc' },
-        }),
+        prisma.academicYear.findMany({ where, skip, take: limit, orderBy: { name: 'asc' } }),
         prisma.academicYear.count({ where }),
     ]);
 
@@ -52,10 +54,12 @@ export async function createAcademicYear(data) {
         error.statusCode = 409;
         throw error;
     }
+    invalidateCache('academicYears:');
     return prisma.academicYear.create({ data });
 }
 
 export async function updateAcademicYear(id, data) {
+    invalidateCache('academicYears:');
     const academicYearId = Number(id);
     const existing = await prisma.academicYear.findUnique({ where: { id: academicYearId } });
     if (!existing) {
@@ -74,6 +78,7 @@ export async function deleteAcademicYear(id) {
         error.statusCode = 404;
         throw error;
     }
+    invalidateCache('academicYears:');
     await prisma.academicYear.delete({ where: { id: academicYearId } });
     return existing;
 }

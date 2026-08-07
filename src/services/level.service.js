@@ -1,5 +1,8 @@
 import prisma from '../config/db.js';
 import { getPaginationParams } from '../utils/pagination.js';
+import { getCached, invalidateCache } from '../utils/cache.js';
+
+const REF_CACHE_TTL = 5 * 60 * 1000;
 
 const levelInclude = {
     program: { select: { id: true, name: true, code: true } },
@@ -23,26 +26,28 @@ export async function listLevels(query) {
     const { page, limit, skip } = getPaginationParams(query);
     const search = query.search?.trim();
 
+    const cacheKey = `levels:${page}:${limit}:${search || ''}`;
+
+    if (!search) {
+        return getCached(cacheKey, REF_CACHE_TTL, async () => {
+            const [levels, total] = await Promise.all([
+                prisma.level.findMany({ include: levelInclude, skip, take: limit, orderBy: { sort_order: 'asc' } }),
+                prisma.level.count(),
+            ]);
+            return { levels, total, page, limit };
+        });
+    }
+
     const where = {
-        ...(search
-            ? {
-                OR: [
-                    { name: { contains: search } },
-                    { code: { contains: search } },
-                    { program: { name: { contains: search } } },
-                ],
-            }
-            : {}),
+        OR: [
+            { name: { contains: search } },
+            { code: { contains: search } },
+            { program: { name: { contains: search } } },
+        ],
     };
 
     const [levels, total] = await Promise.all([
-        prisma.level.findMany({
-            where,
-            include: levelInclude,
-            skip,
-            take: limit,
-            orderBy: { sort_order: 'asc' },
-        }),
+        prisma.level.findMany({ where, include: levelInclude, skip, take: limit, orderBy: { sort_order: 'asc' } }),
         prisma.level.count({ where }),
     ]);
 
@@ -70,10 +75,12 @@ export async function createLevel(data) {
         error.statusCode = 404;
         throw error;
     }
+    invalidateCache('levels:');
     return prisma.level.create({ data, include: levelInclude });
 }
 
 export async function updateLevel(id, data) {
+    invalidateCache('levels:');
     const levelId = Number(id);
     const existing = await prisma.level.findUnique({ where: { id: levelId } });
     if (!existing) {
@@ -100,6 +107,7 @@ export async function deleteLevel(id) {
         error.statusCode = 404;
         throw error;
     }
+    invalidateCache('levels:');
     await prisma.level.delete({ where: { id: levelId } });
     return existing;
 }

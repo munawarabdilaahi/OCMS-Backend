@@ -167,7 +167,7 @@ export async function submitExamResult(data, user) {
             status: resolvedStatus,
         },
         include: {
-            student: { include: { user: true } },
+            student: { include: { user: { select: { id: true, name: true, email: true, phone: true, status: true, role_id: true } } } },
             course: true,
         },
     });
@@ -323,7 +323,7 @@ export async function getExamResults(query, user) {
         prisma.examResult.findMany({
             where,
             include: {
-                student: { include: { user: true } },
+                student: { include: { user: { select: { id: true, name: true, email: true, phone: true, status: true, role_id: true } } } },
                 course: true,
                 exam_schedule: true,
             },

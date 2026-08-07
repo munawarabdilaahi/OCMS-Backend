@@ -72,7 +72,10 @@ export async function getCourses(query, user) {
     };
 
     const teacherInfo = await getTeacherInfo(user);
-    if (teacherInfo !== null && teacherInfo.teacherId !== null) {
+    if (teacherInfo !== null) {
+        if (teacherInfo.teacherId === null) {
+            return { courses: [], total: 0, page, limit };
+        }
         where.teacher_id = teacherInfo.teacherId;
     }
 
@@ -92,7 +95,8 @@ export async function getCourseById(id, user) {
     if (!course) return null;
     if (user && user.roleName === 'Teacher') {
         const teacherInfo = await getTeacherInfo(user);
-        if (teacherInfo !== null && teacherInfo.teacherId !== null && course.teacher_id !== teacherInfo.teacherId) return null;
+        if (teacherInfo === null || teacherInfo.teacherId === null) return null;
+        if (course.teacher_id !== teacherInfo.teacherId) return null;
     }
     return course;
 }

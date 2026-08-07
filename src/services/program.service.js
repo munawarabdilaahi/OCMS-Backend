@@ -1,5 +1,8 @@
 import prisma from '../config/db.js';
 import { getPaginationParams } from '../utils/pagination.js';
+import { getCached, invalidateCache } from '../utils/cache.js';
+
+const REF_CACHE_TTL = 5 * 60 * 1000;
 
 const programInclude = {
     department: { select: { id: true, name: true, code: true } },
@@ -24,26 +27,28 @@ export async function listPrograms(query) {
     const { page, limit, skip } = getPaginationParams(query);
     const search = query.search?.trim();
 
+    const cacheKey = `programs:${page}:${limit}:${search || ''}`;
+
+    if (!search) {
+        return getCached(cacheKey, REF_CACHE_TTL, async () => {
+            const [programs, total] = await Promise.all([
+                prisma.program.findMany({ include: programInclude, skip, take: limit, orderBy: { name: 'asc' } }),
+                prisma.program.count(),
+            ]);
+            return { programs, total, page, limit };
+        });
+    }
+
     const where = {
-        ...(search
-            ? {
-                OR: [
-                    { name: { contains: search } },
-                    { code: { contains: search } },
-                    { department: { name: { contains: search } } },
-                ],
-            }
-            : {}),
+        OR: [
+            { name: { contains: search } },
+            { code: { contains: search } },
+            { department: { name: { contains: search } } },
+        ],
     };
 
     const [programs, total] = await Promise.all([
-        prisma.program.findMany({
-            where,
-            include: programInclude,
-            skip,
-            take: limit,
-            orderBy: { name: 'asc' },
-        }),
+        prisma.program.findMany({ where, include: programInclude, skip, take: limit, orderBy: { name: 'asc' } }),
         prisma.program.count({ where }),
     ]);
 
@@ -71,10 +76,12 @@ export async function createProgram(data) {
         error.statusCode = 404;
         throw error;
     }
+    invalidateCache('programs:');
     return prisma.program.create({ data, include: programInclude });
 }
 
 export async function updateProgram(id, data) {
+    invalidateCache('programs:');
     const programId = Number(id);
     const existing = await prisma.program.findUnique({ where: { id: programId } });
     if (!existing) {
@@ -101,6 +108,7 @@ export async function deleteProgram(id) {
         error.statusCode = 404;
         throw error;
     }
+    invalidateCache('programs:');
     await prisma.program.delete({ where: { id: programId } });
     return existing;
 }

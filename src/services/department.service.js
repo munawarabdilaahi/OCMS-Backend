@@ -1,5 +1,8 @@
 import prisma from '../config/db.js';
 import { getPaginationParams } from '../utils/pagination.js';
+import { getCached, invalidateCache } from '../utils/cache.js';
+
+const DEPT_CACHE_TTL = 5 * 60 * 1000;
 
 function parseValidDate(value) {
     const date = new Date(value);
@@ -72,6 +75,19 @@ export async function listDepartments(query) {
     const search = query.search?.trim();
     const status = query.status?.trim();
     const faculty_id = query.faculty_id ? Number(query.faculty_id) : undefined;
+
+    const hasFilters = search || status || faculty_id;
+    const cacheKey = `departments:${page}:${limit}:${search || ''}:${status || ''}:${faculty_id || ''}`;
+
+    if (!hasFilters) {
+        return getCached(cacheKey, DEPT_CACHE_TTL, async () => {
+            const [departments, total] = await Promise.all([
+                prisma.department.findMany({ include: listInclude, skip, take: limit, orderBy: { name: 'asc' } }),
+                prisma.department.count(),
+            ]);
+            return { departments, total, page, limit };
+        });
+    }
 
     const where = {
         ...(search
@@ -152,6 +168,8 @@ export async function createDepartment(data) {
         error.statusCode = 422;
         throw error;
     }
+
+    invalidateCache('departments:');
 
     return prisma.department.create({
         data: {
@@ -285,6 +303,8 @@ export async function updateDepartment(id, data) {
         updateData.established_date = null;
     }
 
+    invalidateCache('departments:');
+
     return prisma.department.update({
         where: { id: departmentId },
         data: updateData,
@@ -323,6 +343,7 @@ export async function deleteDepartment(id) {
         error.statusCode = 409;
         throw error;
     }
+    invalidateCache('departments:');
     await prisma.department.delete({ where: { id: departmentId } });
     return existing;
 }
