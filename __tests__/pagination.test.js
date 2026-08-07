@@ -48,4 +48,33 @@ describe('getPaginationParams', () => {
         const result = getPaginationParams({ limit: '500' });
         expect(result.limit).toBe(100);
     });
+
+    it('falls back to page 1 for non-numeric page', async () => {
+        const { getPaginationParams } = await import('../src/utils/pagination.js');
+        const result = getPaginationParams({ page: 'abc' });
+        expect(result.page).toBe(1);
+        expect(result.skip).toBe(0);
+    });
+
+    it('falls back to the default limit for non-numeric limit', async () => {
+        const { getPaginationParams } = await import('../src/utils/pagination.js');
+        const result = getPaginationParams({ limit: 'xyz' });
+        expect(result.limit).toBe(20);
+    });
+
+    it('never returns NaN for garbage pagination input', async () => {
+        const { getPaginationParams } = await import('../src/utils/pagination.js');
+        const result = getPaginationParams({ page: 'abc', limit: 'xyz', pageSize: 'oops' });
+        expect(result).toEqual({ page: 1, limit: 20, skip: 0 });
+        expect(Number.isFinite(result.page)).toBe(true);
+        expect(Number.isFinite(result.limit)).toBe(true);
+        expect(Number.isFinite(result.skip)).toBe(true);
+    });
+
+    it('truncates fractional page and limit', async () => {
+        const { getPaginationParams } = await import('../src/utils/pagination.js');
+        const result = getPaginationParams({ page: '2.5', limit: '2.5' });
+        expect(result.page).toBe(2);
+        expect(result.limit).toBe(2);
+    });
 });
