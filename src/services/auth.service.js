@@ -13,7 +13,7 @@ const JWT_ISSUER = 'ocms-api';
 const JWT_AUDIENCE = 'ocms-client';
 
 const SESSION_EXPIRY_DAYS = 30;
-const PUBLIC_ROLES = ['Student', 'Teacher', 'Staff'];
+const PUBLIC_ROLES = ['Student'];
 const RESET_TOKEN_EXPIRY_MINUTES = 60;
 const EMAIL_VERIFY_EXPIRY_MINUTES = 1440;
 
@@ -41,10 +41,11 @@ function userInclude() {
     };
 }
 
-async function createSession(user, userAgent, ipAddress) {
+async function createSession(user, userAgent, ipAddress, tx) {
+    const client = tx || prisma;
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS);
-    return prisma.session.create({
+    return client.session.create({
         data: {
             user_id: user.id,
             user_agent: userAgent || null,
@@ -89,12 +90,13 @@ function signRefreshToken(userId, sessionId) {
     );
 }
 
-async function createRefreshToken(user, session, userAgent, ipAddress) {
+async function createRefreshToken(user, session, userAgent, ipAddress, tx) {
+    const client = tx || prisma;
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     const rawToken = signRefreshToken(user.id, session.id);
     const tokenHash = hashToken(rawToken);
-    await prisma.refreshToken.create({
+    await client.refreshToken.create({
         data: {
             token: tokenHash,
             user_id: user.id,
@@ -155,24 +157,30 @@ export async function register(data, headers, ip) {
 
     const hashedPassword = await hashPassword(password);
     const now = new Date();
-    const user = await userDelegate().create({
-        data: {
-            name,
-            email,
-            password: hashedPassword,
-            status: 'ACTIVE',
-            phone,
-            role_id: role_.id,
-            last_login: now,
-        },
-        include: userInclude(),
+
+    const { user, refreshToken: refreshTokenValue } = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+            data: {
+                name,
+                email,
+                password: hashedPassword,
+                status: 'ACTIVE',
+                phone,
+                role_id: role_.id,
+                last_login: now,
+            },
+            include: userInclude(),
+        });
+
+        const session = await createSession(user, headers['user-agent'], ip, tx);
+        const refreshTokenValue = await createRefreshToken(user, session, headers['user-agent'], ip, tx);
+
+        return { user, refreshToken: refreshTokenValue };
     });
 
-    const session = await createSession(user, headers['user-agent'], ip);
-    const refreshToken = await createRefreshToken(user, session, headers['user-agent'], ip);
     const accessToken = signAccessToken(user);
 
-    return { user, accessToken, refreshToken };
+    return { user, accessToken, refreshToken: refreshTokenValue };
 }
 
 export async function login(data, headers, ip) {
@@ -201,16 +209,21 @@ export async function login(data, headers, ip) {
         throw error;
     }
 
-    await userDelegate().update({
-        where: { id: user.id },
-        data: { last_login: new Date() },
+    const { refreshToken: refreshTokenValue } = await prisma.$transaction(async (tx) => {
+        await tx.user.update({
+            where: { id: user.id },
+            data: { last_login: new Date() },
+        });
+
+        const session = await createSession(user, headers['user-agent'], ip, tx);
+        const refreshTokenValue = await createRefreshToken(user, session, headers['user-agent'], ip, tx);
+
+        return { refreshToken: refreshTokenValue };
     });
 
-    const session = await createSession(user, headers['user-agent'], ip);
-    const refreshToken = await createRefreshToken(user, session, headers['user-agent'], ip);
     const accessToken = signAccessToken(user);
 
-    return { user, accessToken, refreshToken };
+    return { user, accessToken, refreshToken: refreshTokenValue };
 }
 
 export async function refreshToken(rawRefreshToken, headers, ip) {
@@ -255,6 +268,16 @@ export async function refreshToken(rawRefreshToken, headers, ip) {
             data: { revoked_at: new Date() },
         });
         const error = new Error('Refresh token has been revoked. All sessions invalidated.');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    if (storedToken.session && storedToken.session.revoked_at) {
+        await prisma.refreshToken.updateMany({
+            where: { session_id: storedToken.session_id, revoked_at: null },
+            data: { revoked_at: new Date() },
+        });
+        const error = new Error('Session has been revoked. Please log in again.');
         error.statusCode = 401;
         throw error;
     }
@@ -307,10 +330,16 @@ export async function logout(rawRefreshToken, userId) {
     }
 
     if (userId) {
-        await prisma.session.updateMany({
-            where: { user_id: userId, revoked_at: null },
-            data: { revoked_at: new Date() },
-        });
+        await prisma.$transaction([
+            prisma.session.updateMany({
+                where: { user_id: userId, revoked_at: null },
+                data: { revoked_at: new Date() },
+            }),
+            prisma.refreshToken.updateMany({
+                where: { user_id: userId, revoked_at: null },
+                data: { revoked_at: new Date() },
+            }),
+        ]);
     }
 }
 
@@ -490,6 +519,40 @@ export async function revokeSession(sessionId, userId) {
         }),
         prisma.refreshToken.updateMany({
             where: { session_id: session.id, revoked_at: null },
+            data: { revoked_at: new Date() },
+        }),
+    ]);
+}
+
+export async function changePassword(userId, currentPassword, newPassword) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+        const error = new Error('User not found.');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const storedPassword = user.password || user.password_hash || user.passwordHash;
+    const passwordMatches = await comparePassword(currentPassword, storedPassword || '');
+    if (!passwordMatches) {
+        const error = new Error('Current password is incorrect.');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await prisma.$transaction([
+        prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword },
+        }),
+        prisma.session.updateMany({
+            where: { user_id: userId, revoked_at: null },
+            data: { revoked_at: new Date() },
+        }),
+        prisma.refreshToken.updateMany({
+            where: { user_id: userId, revoked_at: null },
             data: { revoked_at: new Date() },
         }),
     ]);

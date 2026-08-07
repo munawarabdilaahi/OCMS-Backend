@@ -1,4 +1,4 @@
-import { serializeUser, getMe as getMeService, register as registerService, login as loginService, refreshToken as refreshTokenService, logout as logoutService, forgotPassword as forgotPasswordService, resetPassword as resetPasswordService, generateEmailVerification as generateEmailVerificationService, verifyEmail as verifyEmailService, getSessions as getSessionsService, revokeSession as revokeSessionService, revokeAllSessions as revokeAllSessionsService } from '../services/auth.service.js';
+import { serializeUser, getMe as getMeService, register as registerService, login as loginService, refreshToken as refreshTokenService, logout as logoutService, forgotPassword as forgotPasswordService, resetPassword as resetPasswordService, generateEmailVerification as generateEmailVerificationService, verifyEmail as verifyEmailService, getSessions as getSessionsService, revokeSession as revokeSessionService, revokeAllSessions as revokeAllSessionsService, changePassword as changePasswordService } from '../services/auth.service.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -83,6 +83,19 @@ export async function logout(req, res, next) {
         await logoutService(refreshTokenValue, req.user?.id);
         clearAuthCookies(res);
         return res.status(200).json({ success: true, message: 'Logged out successfully.' });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function changePassword(req, res, next) {
+    try {
+        await changePasswordService(req.user.id, req.body.currentPassword, req.body.newPassword);
+        clearAuthCookies(res);
+        return res.status(200).json({
+            success: true,
+            message: 'Password changed successfully. Please log in again with your new password.',
+        });
     } catch (error) {
         next(error);
     }

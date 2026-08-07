@@ -1,7 +1,18 @@
 import prisma from '../config/db.js';
+import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
 
-export async function listRoles() {
-    return prisma.role.findMany({ orderBy: { name: 'asc' } });
+export async function listRoles(query) {
+    const { page, limit, skip } = getPaginationParams(query);
+    const search = query.search?.trim();
+
+    const where = search ? { name: { contains: search } } : {};
+
+    const [roles, total] = await Promise.all([
+        prisma.role.findMany({ where, orderBy: { name: 'asc' }, skip, take: limit }),
+        prisma.role.count({ where }),
+    ]);
+
+    return { data: roles, meta: buildPaginationMeta(page, limit, total) };
 }
 
 export async function getRoleById(id) {

@@ -7,6 +7,7 @@ import {
     getMe,
     refreshToken,
     logout,
+    changePassword,
     generateEmailVerification,
     verifyEmail,
     getSessions,
@@ -17,7 +18,7 @@ import { authenticate } from '../middlewares/auth.middleware.js';
 import { auditLog } from '../middlewares/audit.middleware.js';
 import { authLimiter, refreshLimiter } from '../middlewares/rateLimit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
-import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, verifyEmailSchema, refreshTokenSchema } from '../validators/auth.validator.js';
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, verifyEmailSchema, refreshTokenSchema, changePasswordSchema } from '../validators/auth.validator.js';
 
 const router = Router();
 
@@ -250,6 +251,45 @@ router.get('/me', authenticate, getMe);
  *         $ref: '#/components/responses/InternalError'
  */
 router.post('/logout', authenticate, auditLog('LOGOUT'), logout);
+
+/**
+ * @openapi
+ * /auth/change-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Change password
+ *     description: Changes the authenticated user's password. Invalidates all existing sessions.
+ *     operationId: changePassword
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword, confirmPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 example: oldpassword123
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 example: NewPass!23
+ *               confirmPassword:
+ *                 type: string
+ *                 example: NewPass!23
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
+ */
+router.post('/change-password', authenticate, authLimiter, auditLog('CHANGE_PASSWORD'), validate(changePasswordSchema), changePassword);
 
 /**
  * @openapi

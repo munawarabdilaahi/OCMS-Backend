@@ -3,8 +3,8 @@ import { listRoles as listRolesService, getRoleById as getRoleByIdService, creat
 
 export async function listRoles(req, res, next) {
     try {
-        const roles = await listRolesService();
-        return res.status(200).json({ success: true, data: roles });
+        const result = await listRolesService(req.query);
+        return res.status(200).json({ success: true, ...result });
     } catch (error) {
         next(error);
     }

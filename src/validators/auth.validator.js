@@ -6,8 +6,8 @@ export const registerSchema = z.object({
     email: emailSchema('Invalid email format.'),
     password: passwordSchema(),
     phone: z.string().optional(),
-    role: z.string().optional(),
-    roleName: z.string().optional(),
+    role: z.enum(['Student']).optional(),
+    roleName: z.enum(['Student']).optional(),
 });
 
 export const loginSchema = z.object({
@@ -30,6 +30,15 @@ export const resetPasswordSchema = z.object({
 
 export const verifyEmailSchema = z.object({
     token: z.string().min(1, 'Verification token is required.'),
+});
+
+export const changePasswordSchema = z.object({
+    currentPassword: z.string().min(1, 'Current password is required.'),
+    newPassword: passwordSchema(),
+    confirmPassword: z.string(),
+}).refine(data => data.newPassword === data.confirmPassword, {
+    message: 'Passwords must match.',
+    path: ['confirmPassword'],
 });
 
 export const refreshTokenSchema = z.object({
