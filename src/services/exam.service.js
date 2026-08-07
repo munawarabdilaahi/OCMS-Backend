@@ -48,10 +48,17 @@ export async function updateExamSchedule(id, body, user) {
 
     const { course_id, courseId, title, exam_type, examType, exam_date, examDate, start_time, startTime, end_time, endTime, room, status } = body;
 
+    const updatedCourseId = course_id || courseId ? Number(course_id || courseId) : undefined;
+    if (courseIds !== null && updatedCourseId !== undefined && !courseIds.includes(updatedCourseId)) {
+        const error = new Error('Access denied. You can only update exam schedules for your assigned courses.');
+        error.statusCode = 403;
+        throw error;
+    }
+
     const schedule = await prisma.examSchedule.update({
         where: { id: scheduleId },
         data: {
-            ...(course_id || courseId ? { course_id: Number(course_id || courseId) } : {}),
+            ...(updatedCourseId !== undefined ? { course_id: updatedCourseId } : {}),
             ...(title ? { title } : {}),
             ...(exam_type || examType ? { exam_type: exam_type || examType } : {}),
             ...(exam_date || examDate ? { exam_date: new Date(exam_date || examDate) } : {}),
