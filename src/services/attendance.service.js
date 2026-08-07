@@ -224,30 +224,52 @@ export async function bulkCreateAttendance(data, user) {
         throw error;
     }
 
-    const results = [];
+    const studentIds = records
+        .filter((r) => r.student_id || r.studentId)
+        .map((r) => Number(r.student_id || r.studentId));
 
-    for (const record of records) {
-        if (!record.student_id && !record.studentId) continue;
-        const studentId = Number(record.student_id || record.studentId);
+    if (studentIds.length === 0) {
+        return { count: 0, results: [] };
+    }
 
-        const enrolled = await isStudentEnrolled(studentId, resolvedCourseId);
-        if (!enrolled) continue;
-        const status = String(record.status || 'PRESENT').toUpperCase();
+    const [enrollments, existingRecords] = await Promise.all([
+        prisma.enrollment.findMany({
+            where: { student_id: { in: studentIds }, course_id: resolvedCourseId },
+            select: { student_id: true },
+        }),
+        prisma.attendance.findMany({
+            where: {
+                student_id: { in: studentIds },
+                course_id: resolvedCourseId,
+                date: resolvedDate,
+            },
+        }),
+    ]);
 
-        try {
-            const existing = await attendanceDelegate().findUnique({
-                where: { student_id_course_id_date: { student_id: studentId, course_id: resolvedCourseId, date: resolvedDate } },
-            });
+    const enrolledSet = new Set(enrollments.map((e) => e.student_id));
+    const existingMap = new Map(existingRecords.map((r) => [r.student_id, r]));
+
+    const results = await prisma.$transaction(async (tx) => {
+        const created = [];
+
+        for (const record of records) {
+            if (!record.student_id && !record.studentId) continue;
+            const studentId = Number(record.student_id || record.studentId);
+
+            if (!enrolledSet.has(studentId)) continue;
+
+            const status = String(record.status || 'PRESENT').toUpperCase();
+            const existing = existingMap.get(studentId);
 
             if (existing) {
-                const updated = await attendanceDelegate().update({
+                const updated = await tx.attendance.update({
                     where: { id: existing.id },
                     data: { status, remarks: record.remarks },
                     include: attendanceInclude,
                 });
-                results.push(serializeAttendance(updated));
+                created.push(serializeAttendance(updated));
             } else {
-                const created = await attendanceDelegate().create({
+                const newRecord = await tx.attendance.create({
                     data: {
                         student_id: studentId,
                         course_id: resolvedCourseId,
@@ -258,12 +280,12 @@ export async function bulkCreateAttendance(data, user) {
                     },
                     include: attendanceInclude,
                 });
-                results.push(serializeAttendance(created));
+                created.push(serializeAttendance(newRecord));
             }
-        } catch {
-            continue;
         }
-    }
+
+        return created;
+    });
 
     return { count: results.length, results };
 }
