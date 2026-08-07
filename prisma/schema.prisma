@@ -8,13 +8,13 @@ datasource db {
 }
 
 model AcademicYear {
-  id         Int        @id @default(autoincrement())
-  name       String     @unique(map: "AcademicYear_name_key")
+  id         Int                  @id @default(autoincrement())
+  name       String               @unique(map: "AcademicYear_name_key")
   start_date DateTime
   end_date   DateTime
-  status     String     @default("ACTIVE")
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
+  status     academic_year_status @default(ACTIVE)
+  created_at DateTime             @default(now())
+  updated_at DateTime             @updatedAt
   semesters  Semester[]
 
   @@map("academicyear")
@@ -55,6 +55,7 @@ model AuditLog {
 
   @@index([action], map: "AuditLog_action_idx")
   @@index([created_at], map: "AuditLog_created_at_idx")
+  @@index([resource], map: "AuditLog_resource_idx")
   @@index([user_id], map: "AuditLog_user_id_idx")
   @@map("auditlog")
 }
@@ -94,12 +95,13 @@ model Campus {
   medical_facilities   String?
   security_details     String?
   university_id        Int
-  status               String     @default("ACTIVE")
-  created_at           DateTime   @default(now())
-  updated_at           DateTime   @updatedAt
-  university           University @relation(fields: [university_id], references: [id], map: "Campus_university_id_fkey")
+  status               campus_status   @default(ACTIVE)
+  created_at           DateTime        @default(now())
+  updated_at           DateTime        @updatedAt
+  university           University      @relation(fields: [university_id], references: [id], map: "Campus_university_id_fkey")
   faculties            Faculty[]
 
+  @@unique([name, university_id], map: "Campus_name_university_id_key")
   @@index([university_id], map: "Campus_university_id_idx")
   @@index([type], map: "Campus_type_idx")
   @@index([status], map: "Campus_status_idx")
@@ -171,17 +173,18 @@ model Department {
   student_capacity Int?
   facilities       Json?
   research_areas   Json?
-  status           String         @default("ACTIVE")
-  created_at       DateTime       @default(now())
-  updated_at       DateTime       @updatedAt
+  status           department_status @default(ACTIVE)
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
   faculty_id       Int?
   courses          Course[]
-  faculty          Faculty?       @relation(fields: [faculty_id], references: [id], map: "Department_faculty_id_fkey")
+  faculty          Faculty?          @relation(fields: [faculty_id], references: [id], map: "Department_faculty_id_fkey")
   feestructures    FeeStructure[]
   programs         Program[]
   students         Student[]
   teachers         Teacher[]
 
+  @@unique([name, faculty_id], map: "Department_name_faculty_id_key")
   @@index([faculty_id], map: "Department_faculty_id_idx")
   @@index([status], map: "Department_status_idx")
   @@map("department")
@@ -201,14 +204,14 @@ model EmailVerifyToken {
 }
 
 model Enrollment {
-  id         Int      @id @default(autoincrement())
+  id         Int              @id @default(autoincrement())
   student_id Int
   course_id  Int
-  status     String   @default("ACTIVE")
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  course     Course   @relation(fields: [course_id], references: [id], map: "Enrollment_course_id_fkey")
-  student    Student  @relation(fields: [student_id], references: [id], map: "Enrollment_student_id_fkey")
+  status     enrollment_status @default(ACTIVE)
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+  course     Course           @relation(fields: [course_id], references: [id], map: "Enrollment_course_id_fkey")
+  student    Student          @relation(fields: [student_id], references: [id], map: "Enrollment_student_id_fkey")
 
   @@unique([student_id, course_id], map: "Enrollment_student_id_course_id_key")
   @@index([course_id], map: "Enrollment_course_id_idx")
@@ -221,10 +224,10 @@ model ExamResult {
   exam_schedule_id Int?
   student_id       Int
   course_id        Int
-  midterm_score    Decimal           @default(0.000000000000000000000000000000)
-  final_score      Decimal           @default(0.000000000000000000000000000000)
-  activity_score   Decimal           @default(0.000000000000000000000000000000)
-  total_score      Decimal           @default(0.000000000000000000000000000000)
+  midterm_score    Decimal           @default(0) @db.Decimal(5, 2)
+  final_score      Decimal           @default(0) @db.Decimal(5, 2)
+  activity_score   Decimal           @default(0) @db.Decimal(5, 2)
+  total_score      Decimal           @default(0) @db.Decimal(5, 2)
   remarks          String?
   status           examresult_status @default(PUBLISHED)
   created_at       DateTime          @default(now())
@@ -256,6 +259,7 @@ model ExamSchedule {
   course      Course              @relation(fields: [course_id], references: [id], map: "ExamSchedule_course_id_fkey")
 
   @@index([course_id], map: "ExamSchedule_course_id_idx")
+  @@index([exam_date], map: "ExamSchedule_exam_date_idx")
   @@map("examschedule")
 }
 
@@ -283,12 +287,13 @@ model Faculty {
   facilities           Json?
   research_areas       Json?
   campus_id            Int
-  status               String       @default("ACTIVE")
-  created_at           DateTime     @default(now())
-  updated_at           DateTime     @updatedAt
+  status               faculty_status  @default(ACTIVE)
+  created_at           DateTime        @default(now())
+  updated_at           DateTime        @updatedAt
   departments          Department[]
-  campus               Campus       @relation(fields: [campus_id], references: [id], map: "Faculty_campus_id_fkey")
+  campus               Campus          @relation(fields: [campus_id], references: [id], map: "Faculty_campus_id_fkey")
 
+  @@unique([name, campus_id], map: "Faculty_name_campus_id_key")
   @@index([campus_id], map: "Faculty_campus_id_idx")
   @@index([status], map: "Faculty_status_idx")
   @@map("faculty")
@@ -298,7 +303,7 @@ model FeeStructure {
   id            Int                 @id @default(autoincrement())
   name          String
   description   String?
-  amount        Decimal
+  amount        Decimal           @db.Decimal(10, 2)
   department_id Int?
   academic_year String
   semester      String?
@@ -317,10 +322,10 @@ model Invoice {
   invoice_number   String        @unique(map: "Invoice_invoice_number_key")
   student_id       Int
   fee_structure_id Int?
-  amount           Decimal
-  paid_amount      Decimal       @default(0.000000000000000000000000000000)
-  balance          Decimal
-  status           String        @default("Pending")
+  amount           Decimal       @db.Decimal(10, 2)
+  paid_amount      Decimal       @default(0) @db.Decimal(10, 2)
+  balance          Decimal       @db.Decimal(10, 2)
+  status           invoice_status @default(PENDING)
   due_date         DateTime
   academic_year    String?
   semester         String?
@@ -331,24 +336,27 @@ model Invoice {
   payments         Payment[]
   student          Student       @relation(fields: [student_id], references: [id], map: "Invoice_student_id_fkey")
 
+  @@index([due_date], map: "Invoice_due_date_idx")
   @@index([fee_structure_id], map: "Invoice_fee_structure_id_idx")
+  @@index([status], map: "Invoice_status_idx")
   @@index([student_id], map: "Invoice_student_id_idx")
   @@map("invoice")
 }
 
 model Level {
-  id         Int       @id @default(autoincrement())
+  id         Int          @id @default(autoincrement())
   name       String
-  code       String    @unique(map: "Level_code_key")
+  code       String       @unique(map: "Level_code_key")
   program_id Int
-  sort_order Int       @default(0)
-  status     String    @default("ACTIVE")
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
+  sort_order Int          @default(0)
+  status     level_status @default(ACTIVE)
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
   courses    Course[]
-  program    Program   @relation(fields: [program_id], references: [id], map: "Level_program_id_fkey")
+  program    Program      @relation(fields: [program_id], references: [id], map: "Level_program_id_fkey")
   students   Student[]
 
+  @@unique([name, program_id], map: "Level_name_program_id_key")
   @@index([program_id], map: "Level_program_id_idx")
   @@map("level")
 }
@@ -370,10 +378,10 @@ model PasswordResetToken {
 model Payment {
   id               Int                    @id @default(autoincrement())
   invoice_id       Int
-  amount           Decimal
+  amount           Decimal                @db.Decimal(10, 2)
   payment_method   payment_payment_method
   reference_number String?
-  status           String                 @default("Completed")
+  status           payment_status         @default(COMPLETED)
   notes            String?
   recorded_by      Int?
   created_at       DateTime               @default(now())
@@ -381,25 +389,28 @@ model Payment {
   invoice          Invoice                @relation(fields: [invoice_id], references: [id], map: "Payment_invoice_id_fkey")
   transactions     Transaction[]
 
+  @@index([created_at], map: "Payment_created_at_idx")
   @@index([invoice_id], map: "Payment_invoice_id_idx")
+  @@index([status], map: "Payment_status_idx")
   @@map("payment")
 }
 
 model Program {
-  id             Int        @id @default(autoincrement())
+  id             Int            @id @default(autoincrement())
   name           String
-  code           String     @unique(map: "Program_code_key")
+  code           String         @unique(map: "Program_code_key")
   department_id  Int
   duration_years Int?
   type           String?
-  status         String     @default("ACTIVE")
-  created_at     DateTime   @default(now())
-  updated_at     DateTime   @updatedAt
+  status         program_status @default(ACTIVE)
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
   courses        Course[]
-  department     Department @relation(fields: [department_id], references: [id], map: "Program_department_id_fkey")
+  department     Department     @relation(fields: [department_id], references: [id], map: "Program_department_id_fkey")
   levels         Level[]
   students       Student[]
 
+  @@unique([name, department_id], map: "Program_name_department_id_key")
   @@index([department_id], map: "Program_department_id_idx")
   @@map("program")
 }
@@ -435,16 +446,17 @@ model Role {
 }
 
 model Semester {
-  id               Int          @id @default(autoincrement())
+  id               Int            @id @default(autoincrement())
   name             String
   academic_year_id Int
   start_date       DateTime
   end_date         DateTime
-  status           String       @default("ACTIVE")
-  created_at       DateTime     @default(now())
-  updated_at       DateTime     @updatedAt
-  academic_year    AcademicYear @relation(fields: [academic_year_id], references: [id], map: "Semester_academic_year_id_fkey")
+  status           semester_status @default(ACTIVE)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+  academic_year    AcademicYear   @relation(fields: [academic_year_id], references: [id], map: "Semester_academic_year_id_fkey")
 
+  @@unique([name, academic_year_id], map: "Semester_name_academic_year_id_key")
   @@index([academic_year_id], map: "Semester_academic_year_id_idx")
   @@map("semester")
 }
@@ -473,7 +485,7 @@ model Student {
   date_of_birth DateTime?
   gender        student_gender?
   address       String?
-  status        String          @default("ACTIVE")
+  status        student_status  @default(ACTIVE)
   created_at    DateTime        @default(now())
   updated_at    DateTime        @updatedAt
   level_id      Int?
@@ -503,7 +515,7 @@ model Teacher {
   employment_date DateTime?
   gender          teacher_gender?
   address         String?
-  status          String          @default("ACTIVE")
+  status          teacher_status  @default(ACTIVE)
   created_at      DateTime        @default(now())
   updated_at      DateTime        @updatedAt
   attendances     Attendance[]
@@ -519,7 +531,7 @@ model Transaction {
   id          Int      @id @default(autoincrement())
   payment_id  Int
   type        String
-  amount      Decimal
+  amount      Decimal  @db.Decimal(10, 2)
   description String?
   reference   String?
   created_at  DateTime @default(now())
@@ -571,7 +583,7 @@ model User {
   email               String               @unique(map: "User_email_key")
   password            String
   phone               String?
-  status              String               @default("ACTIVE")
+  status              user_status          @default(ACTIVE)
   role_id             Int
   created_at          DateTime             @default(now())
   updated_at          DateTime             @updatedAt
@@ -659,4 +671,86 @@ enum university_status {
   INACTIVE
   SUSPENDED
   CLOSED
+}
+
+enum user_status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DELETED
+  DISABLED
+}
+
+enum academic_year_status {
+  ACTIVE
+  INACTIVE
+}
+
+enum campus_status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum department_status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum enrollment_status {
+  ACTIVE
+  DROPPED
+  WITHDRAWN
+}
+
+enum faculty_status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum invoice_status {
+  PENDING
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+}
+
+enum level_status {
+  ACTIVE
+  INACTIVE
+}
+
+enum payment_status {
+  COMPLETED
+  PENDING
+  FAILED
+  REFUNDED
+}
+
+enum program_status {
+  ACTIVE
+  INACTIVE
+}
+
+enum semester_status {
+  ACTIVE
+  INACTIVE
+}
+
+enum student_status {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum teacher_status {
+  ACTIVE
+  INACTIVE
+  DELETED
 }

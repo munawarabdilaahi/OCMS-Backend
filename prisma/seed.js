@@ -52,8 +52,8 @@ async function normalizeRoleNames() {
 }
 
 async function main() {
-    if (process.env.NODE_ENV === 'production' && !SEED_ADMIN_PASSWORD) {
-        console.error('FATAL: SEED_ADMIN_PASSWORD must be set when seeding in production.');
+    if (!SEED_ADMIN_PASSWORD) {
+        console.error('FATAL: SEED_ADMIN_PASSWORD must be set. Generate a strong password and set it as an environment variable.');
         process.exit(1);
     }
 
@@ -63,11 +63,8 @@ async function main() {
         console.log('  All role names already correct.');
     }
 
-    const adminPassword = SEED_ADMIN_PASSWORD || 'ChangeMe123!';
+    const adminPassword = SEED_ADMIN_PASSWORD;
     console.log(`Seeding admin user: ${SEED_ADMIN_EMAIL}`);
-    if (!SEED_ADMIN_PASSWORD) {
-        console.warn('WARNING: Using default seed password. Set SEED_ADMIN_PASSWORD environment variable for production.');
-    }
 
     const hashedPassword = await bcrypt.hash(adminPassword, BCRYPT_ROUNDS);
 
