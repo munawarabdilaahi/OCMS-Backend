@@ -1,5 +1,7 @@
 import prisma from '../config/db.js';
 
+const MAX_USER_AGENT_LENGTH = 500;
+
 export function auditLog(action) {
     return async (req, res, next) => {
         const start = Date.now();
@@ -24,7 +26,7 @@ export function auditLog(action) {
                         method: req.method,
                         status_code: statusCode,
                         ip_address: req.ip,
-                        user_agent: req.headers['user-agent'] || null,
+                        user_agent: truncateString(req.headers['user-agent'], MAX_USER_AGENT_LENGTH),
                         metadata,
                     },
                 }).catch((err) => {
@@ -54,4 +56,9 @@ function sanitizeForLog(obj, depth = 0) {
         }
     }
     return result;
+}
+
+function truncateString(str, maxLength) {
+    if (!str) return null;
+    return str.length > maxLength ? str.slice(0, maxLength) : str;
 }
