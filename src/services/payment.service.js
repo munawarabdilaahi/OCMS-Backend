@@ -34,13 +34,21 @@ function serializePayment(payment) {
     };
 }
 
-async function updateInvoiceBalance(invoiceId, tx) {
+async function getInvoicePaymentTotals(invoiceId, tx) {
     const invoice = await tx.invoice.findUnique({ where: { id: invoiceId }, include: { payments: true } });
-    if (!invoice) return;
+    if (!invoice) return null;
     const paidSum = invoice.payments
         .filter((p) => p.status === 'COMPLETED')
         .reduce((sum, p) => sum + Number(p.amount), 0);
-    const balance = Number(invoice.amount) - paidSum;
+    return { paidSum, balance: Number(invoice.amount) - paidSum };
+}
+
+async function updateInvoiceBalance(invoiceId, tx) {
+    const invoice = await tx.invoice.findUnique({ where: { id: invoiceId } });
+    if (!invoice) return;
+    const totals = await getInvoicePaymentTotals(invoiceId, tx);
+    if (!totals) return;
+    const { paidSum, balance } = totals;
     let status = 'PENDING';
     if (balance <= 0) status = 'PAID';
     else if (paidSum > 0) status = 'PARTIAL';
@@ -62,6 +70,19 @@ export async function createPayment(data, userId) {
     }
 
     const payment = await prisma.$transaction(async (tx) => {
+        if (!isFinite(numericAmount) || numericAmount <= 0) {
+            const error = new Error('Payment amount must be a positive number.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const totals = await getInvoicePaymentTotals(Number(invoice_id), tx);
+        if (!totals || numericAmount > totals.balance) {
+            const error = new Error("Payment amount cannot exceed the invoice's remaining balance.");
+            error.statusCode = 400;
+            throw error;
+        }
+
         const newPayment = await tx.payment.create({
             data: {
                 invoice_id: Number(invoice_id),
