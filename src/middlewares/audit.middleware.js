@@ -2,25 +2,44 @@ import prisma from '../config/db.js';
 
 const MAX_USER_AGENT_LENGTH = 500;
 
+function resolveActorId(req) {
+    return req.user?.id || req.auditActor?.id || null;
+}
+
+function resolveActorEmail(req) {
+    return req.auditActor?.email || req.user?.email || null;
+}
+
 export function auditLog(action) {
     return async (req, res, next) => {
         const start = Date.now();
         const originalJson = res.json.bind(res);
+
         res.json = function (body) {
-            const statusCode = res.statusCode;
-            if (req.user) {
+            try {
+                const statusCode = res.statusCode;
+                const actorId = resolveActorId(req);
+                const actorEmail = resolveActorEmail(req);
+
                 const metadata = {
                     body: sanitizeForLog(req.body),
                     params: req.params,
                     query: req.query,
                     duration_ms: Date.now() - start,
                 };
-                if (statusCode >= 400) {
-                    metadata.error = typeof body === 'object' && body !== null ? body.message || body.error || body : body;
+                if (actorEmail) {
+                    metadata.actor = { email: actorEmail };
                 }
+                if (statusCode >= 400) {
+                    metadata.error =
+                        typeof body === 'object' && body !== null
+                            ? body.message || body.error || body
+                            : body;
+                }
+
                 prisma.auditLog.create({
                     data: {
-                        user_id: req.user.id,
+                        user_id: actorId,
                         action,
                         resource: req.originalUrl,
                         method: req.method,
@@ -29,36 +48,37 @@ export function auditLog(action) {
                         user_agent: truncateString(req.headers['user-agent'], MAX_USER_AGENT_LENGTH),
                         metadata,
                     },
-                }).catch((err) => {
-                    console.error(`Audit log failed [${action}]:`, err.message);
+                }).catch((error) => {
+                    console.error(`Audit log write failed [${action}]:`, error.message || error);
                 });
+            } catch (error) {
+                console.error(`Audit log build failed [${action}]:`, error.message || error);
             }
             return originalJson(body);
         };
+
         next();
     };
 }
 
-function sanitizeForLog(obj, depth = 0) {
-    if (depth > 5 || !obj || typeof obj !== 'object') return obj;
-    const sensitive = ['password', 'token', 'secret', 'authorization', 'credit_card', 'ssn', 'pin'];
-    if (Array.isArray(obj)) {
-        return obj.map((item) => sanitizeForLog(item, depth + 1));
-    }
-    const result = {};
-    for (const key of Object.keys(obj)) {
-        if (sensitive.some((s) => key.toLowerCase().includes(s))) {
-            result[key] = '[REDACTED]';
-        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-            result[key] = sanitizeForLog(obj[key], depth + 1);
+export function sanitizeForLog(body) {
+    if (body == null) return {};
+    if (typeof body !== 'object') return { value: String(body) };
+    if (Array.isArray(body)) return body.map((entry) => sanitizeForLog(entry));
+
+    return Object.keys(body).reduce((acc, key) => {
+        const value = body[key];
+        if (['password', 'currentPassword', 'newPassword', 'refreshToken', 'accessToken', 'token'].includes(key)) {
+            acc[key] = '[REDACTED]';
         } else {
-            result[key] = obj[key];
+            acc[key] = value;
         }
-    }
-    return result;
+        return acc;
+    }, {});
 }
 
-function truncateString(str, maxLength) {
-    if (!str) return null;
+export function truncateString(value, maxLength) {
+    if (value == null) return null;
+    const str = String(value);
     return str.length > maxLength ? str.slice(0, maxLength) : str;
 }

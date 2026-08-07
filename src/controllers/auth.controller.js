@@ -38,6 +38,7 @@ export async function getMe(req, res, next) {
 export async function register(req, res, next) {
     try {
         const { user, accessToken, refreshToken } = await registerService(req.body, req.headers, req.ip);
+        req.auditActor = { id: user.id, email: user.email };
         setAuthCookies(res, accessToken, refreshToken);
         return res.status(201).json({
             success: true,
@@ -52,6 +53,7 @@ export async function register(req, res, next) {
 export async function login(req, res, next) {
     try {
         const { user, accessToken, refreshToken } = await loginService(req.body, req.headers, req.ip);
+        req.auditActor = { id: user.id, email: user.email };
         setAuthCookies(res, accessToken, refreshToken);
         return res.status(200).json({
             success: true,
