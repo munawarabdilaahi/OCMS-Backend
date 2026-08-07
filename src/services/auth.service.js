@@ -5,6 +5,7 @@ import { hashToken } from '../utils/hash.js';
 import { generateToken } from '../utils/crypto.js';
 import { isInactive } from '../utils/validation.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
+import { sendMail, buildAuthLink } from '../utils/mailer.js';
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 const JWT_REFRESH_EXPIRES_IN = '7d';
@@ -368,6 +369,12 @@ export async function forgotPassword(email) {
         },
     });
 
+    await sendMail({
+        to: user.email,
+        subject: 'Password Reset Request',
+        text: `You requested a password reset. Open the following link to reset your password (valid for ${RESET_TOKEN_EXPIRY_MINUTES} minutes):\n\n${buildAuthLink('reset-password', rawToken)}\n\nIf you did not request this, you can ignore this email.`,
+    });
+
     return { resetToken: rawToken };
 }
 
@@ -446,6 +453,12 @@ export async function generateEmailVerification(userId) {
             token_hash: tokenHash,
             expires_at: expiresAt,
         },
+    });
+
+    await sendMail({
+        to: user.email,
+        subject: 'Verify Your Email Address',
+        text: `Please verify your email address by opening the following link (valid for ${EMAIL_VERIFY_EXPIRY_MINUTES} minutes):\n\n${buildAuthLink('verify-email', rawToken)}\n\nIf you did not create an account, you can ignore this email.`,
     });
 
     return { verifyToken: rawToken, alreadyVerified: false };
