@@ -36,7 +36,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/stats', authorize('Admin', 'SuperAdmin', 'Teacher', 'Registrar'), getStats);
+router.get('/stats', authorize('Admin', 'SuperAdmin'), getStats);
 
 /**
  * @openapi
