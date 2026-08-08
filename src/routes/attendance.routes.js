@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { authenticate, authorize, requirePermission } from '../middlewares/auth.middleware.js';
 import { auditLog } from '../middlewares/audit.middleware.js';
 import {
     createAttendance,
@@ -58,7 +58,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/', authorize('Admin', 'SuperAdmin', 'Teacher'), auditLog('CREATE_ATTENDANCE'), validate(createAttendanceSchema), createAttendance);
+router.post('/', authorize('Admin', 'SuperAdmin', 'Teacher'), requirePermission('attendance:manage'), auditLog('CREATE_ATTENDANCE'), validate(createAttendanceSchema), createAttendance);
 
 /**
  * @openapi
@@ -96,7 +96,7 @@ router.post('/', authorize('Admin', 'SuperAdmin', 'Teacher'), auditLog('CREATE_A
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/bulk', authorize('Admin', 'SuperAdmin', 'Teacher'), auditLog('BULK_CREATE_ATTENDANCE'), validate(bulkCreateAttendanceSchema), bulkCreateAttendance);
+router.post('/bulk', authorize('Admin', 'SuperAdmin', 'Teacher'), requirePermission('attendance:manage'), auditLog('BULK_CREATE_ATTENDANCE'), validate(bulkCreateAttendanceSchema), bulkCreateAttendance);
 
 /**
  * @openapi
@@ -163,7 +163,7 @@ router.post('/bulk', authorize('Admin', 'SuperAdmin', 'Teacher'), auditLog('BULK
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), getAttendance);
+router.get('/', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), requirePermission('attendance:view'), getAttendance);
 
 /**
  * @openapi
@@ -190,7 +190,7 @@ router.get('/', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), getAtten
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/stats', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), getAttendanceStats);
+router.get('/stats', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), requirePermission('attendance:view'), getAttendanceStats);
 
 /**
  * @openapi
@@ -242,7 +242,7 @@ router.get('/stats', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), get
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.put('/:id', authorize('Admin', 'SuperAdmin', 'Teacher'), auditLog('UPDATE_ATTENDANCE'), validate(updateAttendanceSchema), updateAttendance);
+router.put('/:id', authorize('Admin', 'SuperAdmin', 'Teacher'), requirePermission('attendance:manage'), auditLog('UPDATE_ATTENDANCE'), validate(updateAttendanceSchema), updateAttendance);
 
 /**
  * @openapi
@@ -277,6 +277,6 @@ router.put('/:id', authorize('Admin', 'SuperAdmin', 'Teacher'), auditLog('UPDATE
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/:id', authorize('Admin', 'SuperAdmin', 'Teacher'), auditLog('DELETE_ATTENDANCE'), deleteAttendance);
+router.delete('/:id', authorize('Admin', 'SuperAdmin', 'Teacher'), requirePermission('attendance:manage'), auditLog('DELETE_ATTENDANCE'), deleteAttendance);
 
 export default router;

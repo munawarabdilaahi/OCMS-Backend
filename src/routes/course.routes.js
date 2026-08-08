@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { authenticate, authorize, requirePermission } from '../middlewares/auth.middleware.js';
 import { auditLog } from '../middlewares/audit.middleware.js';
 import {
     createCourse,
@@ -61,7 +61,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/', authorize('Admin', 'SuperAdmin'), auditLog('CREATE_COURSE'), validate(createCourseSchema), createCourse);
+router.post('/', authorize('Admin', 'SuperAdmin'), requirePermission('courses:manage'), auditLog('CREATE_COURSE'), validate(createCourseSchema), createCourse);
 
 /**
  * @openapi
@@ -116,7 +116,7 @@ router.post('/', authorize('Admin', 'SuperAdmin'), auditLog('CREATE_COURSE'), va
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student', 'Registrar'), getCourses);
+router.get('/', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student', 'Registrar'), requirePermission('courses:view'), getCourses);
 
 /**
  * @openapi
@@ -153,7 +153,7 @@ router.get('/', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student', 'Registra
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/:id', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student', 'Registrar'), getCourseById);
+router.get('/:id', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student', 'Registrar'), requirePermission('courses:view'), getCourseById);
 
 /**
  * @openapi
@@ -206,7 +206,7 @@ router.get('/:id', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student', 'Regis
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.put('/:id', authorize('Admin', 'SuperAdmin'), auditLog('UPDATE_COURSE'), validate(updateCourseSchema), updateCourse);
+router.put('/:id', authorize('Admin', 'SuperAdmin'), requirePermission('courses:manage'), auditLog('UPDATE_COURSE'), validate(updateCourseSchema), updateCourse);
 
 /**
  * @openapi
@@ -241,6 +241,6 @@ router.put('/:id', authorize('Admin', 'SuperAdmin'), auditLog('UPDATE_COURSE'), 
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/:id', authorize('Admin', 'SuperAdmin'), auditLog('DELETE_COURSE'), deleteCourse);
+router.delete('/:id', authorize('Admin', 'SuperAdmin'), requirePermission('courses:manage'), auditLog('DELETE_COURSE'), deleteCourse);
 
 export default router;
