@@ -44,6 +44,31 @@ export function authenticate(req, res, next) {
     }
 }
 
+export function normalizePermissions(permissions) {
+    if (permissions === null || permissions === undefined) {
+        return [];
+    }
+    if (Array.isArray(permissions)) {
+        return permissions.filter((permission) => typeof permission === 'string');
+    }
+    if (typeof permissions === 'string') {
+        const trimmed = permissions.trim();
+        if (!trimmed) {
+            return [];
+        }
+        try {
+            const parsed = JSON.parse(trimmed);
+            return normalizePermissions(parsed);
+        } catch {
+            return [trimmed];
+        }
+    }
+    if (typeof permissions === 'object') {
+        return Object.keys(permissions).filter((key) => permissions[key]);
+    }
+    return [];
+}
+
 export function authorize(...allowedRoles) {
     return async (req, res, next) => {
         if (!req.user) {
@@ -72,9 +97,30 @@ export function authorize(...allowedRoles) {
             }
             req.user.roleName = roleName;
             req.user.dbUserId = user.id;
+            req.user.permissions = normalizePermissions(user.role?.permissions);
             next();
         } catch (error) {
             next(error);
         }
+    };
+}
+
+export function requirePermission(...requiredPermissions) {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: 'Authentication required.' });
+        }
+        if (requiredPermissions.length === 0) {
+            return next();
+        }
+        const permissions = Array.isArray(req.user.permissions) ? req.user.permissions : [];
+        const granted = permissions.includes('*') || requiredPermissions.every((permission) => permissions.includes(permission));
+        if (!granted) {
+            return res.status(403).json({
+                success: false,
+                message: `Access denied. Required permission: ${requiredPermissions.join(' and ')}.`,
+            });
+        }
+        next();
     };
 }

@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
+import { normalizePermissions } from '../middlewares/auth.middleware.js';
 
 export async function listRoles(query) {
     const { page, limit, skip } = getPaginationParams(query);
@@ -27,7 +28,7 @@ export async function createRole(data) {
         error.statusCode = 409;
         throw error;
     }
-    return prisma.role.create({ data: { name, permissions: permissions || '{}' } });
+    return prisma.role.create({ data: { name, permissions: normalizePermissions(permissions) } });
 }
 
 export async function updateRole(id, data) {
@@ -43,7 +44,7 @@ export async function updateRole(id, data) {
         where: { id: roleId },
         data: {
             ...(name !== undefined ? { name } : {}),
-            ...(permissions !== undefined ? { permissions } : {}),
+            ...(permissions !== undefined ? { permissions: normalizePermissions(permissions) } : {}),
         },
     });
 }
