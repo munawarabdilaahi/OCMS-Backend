@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { ROLE_PERMISSIONS_DEFAULTS } from '../src/constants/permissions.js';
 
 const prisma = new PrismaClient();
 
@@ -8,7 +9,7 @@ const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD;
 const SEED_ADMIN_NAME = process.env.SEED_ADMIN_NAME || 'System Administrator';
 const BCRYPT_ROUNDS = 12;
 
-const CANONICAL_ROLES = ['Admin', 'SuperAdmin', 'Registrar', 'Teacher', 'Accountant', 'Student'];
+const CANONICAL_ROLES = Object.keys(ROLE_PERMISSIONS_DEFAULTS);
 
 const CASE_MAP = {
     ADMIN: 'Admin',
@@ -80,7 +81,7 @@ async function main() {
             role: {
                 connectOrCreate: {
                     where: { name: 'Admin' },
-                    create: { name: 'Admin' },
+                    create: { name: 'Admin', permissions: ROLE_PERMISSIONS_DEFAULTS.Admin },
                 },
             },
         },
@@ -89,10 +90,11 @@ async function main() {
     console.log(`Admin user seeded: ${admin.email}`);
 
     for (const name of CANONICAL_ROLES) {
+        const permissions = ROLE_PERMISSIONS_DEFAULTS[name];
         await prisma.role.upsert({
             where: { name },
-            update: {},
-            create: { name },
+            update: { permissions },
+            create: { name, permissions },
         });
     }
     console.log(`Roles seeded: ${CANONICAL_ROLES.join(', ')}`);
