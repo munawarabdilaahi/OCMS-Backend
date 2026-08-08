@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
 import { isInactive } from '../utils/validation.js';
+import { MANAGE_IMPLIES_VIEW } from '../constants/permissions.js';
 
 const JWT_ALGORITHM = 'HS256';
 const JWT_ISSUER = 'ocms-api';
@@ -105,6 +106,21 @@ export function authorize(...allowedRoles) {
     };
 }
 
+export function hasPermission(permissions, requiredPermission) {
+    if (permissions.includes('*')) {
+        return true;
+    }
+    if (permissions.includes(requiredPermission)) {
+        return true;
+    }
+    for (const [manage, view] of Object.entries(MANAGE_IMPLIES_VIEW)) {
+        if (requiredPermission === view && permissions.includes(manage)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 export function requirePermission(...requiredPermissions) {
     return (req, res, next) => {
         if (!req.user) {
@@ -114,7 +130,7 @@ export function requirePermission(...requiredPermissions) {
             return next();
         }
         const permissions = Array.isArray(req.user.permissions) ? req.user.permissions : [];
-        const granted = permissions.includes('*') || requiredPermissions.every((permission) => permissions.includes(permission));
+        const granted = requiredPermissions.every((permission) => hasPermission(permissions, permission));
         if (!granted) {
             return res.status(403).json({
                 success: false,

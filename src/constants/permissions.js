@@ -12,6 +12,12 @@ export const PERMISSIONS = [
         description: 'Create, update, delete, and view student records.',
     },
     {
+        key: 'students:view',
+        label: 'View Students',
+        module: 'Students',
+        description: 'View student records without changing them.',
+    },
+    {
         key: 'courses:manage',
         label: 'Manage Courses',
         module: 'Courses',
@@ -70,10 +76,20 @@ export const PERMISSIONS = [
 export const ROLE_PERMISSIONS_DEFAULTS = {
     Admin: ['*'],
     SuperAdmin: ['*'],
-    Registrar: ['dashboard:view', 'students:manage', 'courses:manage'],
-    Teacher: ['dashboard:view', 'attendance:manage', 'results:manage'],
-    Accountant: ['dashboard:view', 'payments:manage'],
-    Student: ['dashboard:view', 'courses:view', 'attendance:view', 'results:view', 'payments:view'],
+    Registrar: ['dashboard:view', 'students:manage', 'courses:manage', 'courses:view'],
+    Teacher: ['dashboard:view', 'courses:view', 'attendance:manage', 'attendance:view', 'results:manage', 'results:view'],
+    Accountant: ['dashboard:view', 'payments:manage', 'payments:view'],
+    Student: ['dashboard:view', 'students:view', 'courses:view', 'attendance:view', 'results:view', 'payments:view'],
+};
+
+// resource:manage implies resource:view. Guard routes with the :view key and a
+// manage user still passes. dashboard:view and settings:manage have no pair.
+export const MANAGE_IMPLIES_VIEW = {
+    'students:manage': 'students:view',
+    'courses:manage': 'courses:view',
+    'attendance:manage': 'attendance:view',
+    'results:manage': 'results:view',
+    'payments:manage': 'payments:view',
 };
 
 export const CANONICAL_ROLES = Object.keys(ROLE_PERMISSIONS_DEFAULTS);

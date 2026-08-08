@@ -4,12 +4,14 @@ import {
     authorize,
     requirePermission,
     normalizePermissions,
+    hasPermission,
 } from '../src/middlewares/auth.middleware.js';
 import {
     PERMISSIONS,
     ROLE_PERMISSIONS_DEFAULTS,
     CANONICAL_ROLES,
     ALL_PERMISSION_KEYS,
+    MANAGE_IMPLIES_VIEW,
 } from '../src/constants/permissions.js';
 import { createRoleSchema, updateRoleSchema } from '../src/validators/role.validator.js';
 
@@ -48,11 +50,12 @@ async function runAuthorize(allowedRoles, user) {
 }
 
 describe('permission catalog', () => {
-    it('exposes the expected 11 permission keys', () => {
-        expect(PERMISSIONS).toHaveLength(11);
+    it('exposes the expected 12 permission keys', () => {
+        expect(PERMISSIONS).toHaveLength(12);
         expect(ALL_PERMISSION_KEYS).toEqual([
             'dashboard:view',
             'students:manage',
+            'students:view',
             'courses:manage',
             'courses:view',
             'attendance:manage',
@@ -69,6 +72,46 @@ describe('permission catalog', () => {
         expect(CANONICAL_ROLES).toEqual(['Admin', 'SuperAdmin', 'Registrar', 'Teacher', 'Accountant', 'Student']);
         expect(ROLE_PERMISSIONS_DEFAULTS.Admin).toEqual(['*']);
         expect(ROLE_PERMISSIONS_DEFAULTS.SuperAdmin).toEqual(['*']);
+    });
+
+    it('defines the updated role defaults matching route authorization', () => {
+        expect(ROLE_PERMISSIONS_DEFAULTS.Registrar).toEqual([
+            'dashboard:view',
+            'students:manage',
+            'courses:manage',
+            'courses:view',
+        ]);
+        expect(ROLE_PERMISSIONS_DEFAULTS.Teacher).toEqual([
+            'dashboard:view',
+            'courses:view',
+            'attendance:manage',
+            'attendance:view',
+            'results:manage',
+            'results:view',
+        ]);
+        expect(ROLE_PERMISSIONS_DEFAULTS.Accountant).toEqual([
+            'dashboard:view',
+            'payments:manage',
+            'payments:view',
+        ]);
+        expect(ROLE_PERMISSIONS_DEFAULTS.Student).toEqual([
+            'dashboard:view',
+            'students:view',
+            'courses:view',
+            'attendance:view',
+            'results:view',
+            'payments:view',
+        ]);
+    });
+
+    it('maps every manage permission to its matching view permission', () => {
+        expect(MANAGE_IMPLIES_VIEW).toEqual({
+            'students:manage': 'students:view',
+            'courses:manage': 'courses:view',
+            'attendance:manage': 'attendance:view',
+            'results:manage': 'results:view',
+            'payments:manage': 'payments:view',
+        });
     });
 
     it('every default permission key is a known permission key or the "*" wildcard', () => {
@@ -268,6 +311,81 @@ describe('requirePermission middleware', () => {
         expect(res.statusCode).toBe(403);
         requirePermission('students:manage')(missing, res, next);
         expect(res.statusCode).toBe(403);
+    });
+});
+
+describe('manage implies view inheritance', () => {
+    it('manage grants its corresponding view permission', () => {
+        expect(hasPermission(['attendance:manage'], 'attendance:view')).toBe(true);
+        expect(hasPermission(['courses:manage'], 'courses:view')).toBe(true);
+        expect(hasPermission(['results:manage'], 'results:view')).toBe(true);
+        expect(hasPermission(['payments:manage'], 'payments:view')).toBe(true);
+        expect(hasPermission(['students:manage'], 'students:view')).toBe(true);
+    });
+
+    it('view does NOT grant manage', () => {
+        expect(hasPermission(['attendance:view'], 'attendance:manage')).toBe(false);
+        expect(hasPermission(['courses:view'], 'courses:manage')).toBe(false);
+        expect(hasPermission(['results:view'], 'results:manage')).toBe(false);
+        expect(hasPermission(['payments:view'], 'payments:manage')).toBe(false);
+        expect(hasPermission(['students:view'], 'students:manage')).toBe(false);
+    });
+
+    it('"*" grants any permission', () => {
+        expect(hasPermission(['*'], 'attendance:manage')).toBe(true);
+        expect(hasPermission(['*'], 'settings:manage')).toBe(true);
+        expect(hasPermission(['*'], 'students:view')).toBe(true);
+    });
+
+    it('applies no inheritance to unrelated permissions', () => {
+        expect(hasPermission(['settings:manage'], 'settings:view')).toBe(false);
+        expect(hasPermission(['dashboard:manage'], 'dashboard:view')).toBe(false);
+    });
+
+    it('Teacher satisfies attendance:view using attendance:manage', () => {
+        expect(hasPermission(ROLE_PERMISSIONS_DEFAULTS.Teacher, 'attendance:view')).toBe(true);
+    });
+
+    it('Teacher satisfies results:view using results:manage', () => {
+        expect(hasPermission(ROLE_PERMISSIONS_DEFAULTS.Teacher, 'results:view')).toBe(true);
+    });
+
+    it('Teacher satisfies courses:view directly', () => {
+        expect(hasPermission(ROLE_PERMISSIONS_DEFAULTS.Teacher, 'courses:view')).toBe(true);
+    });
+
+    it('Registrar satisfies courses:view directly', () => {
+        expect(hasPermission(ROLE_PERMISSIONS_DEFAULTS.Registrar, 'courses:view')).toBe(true);
+    });
+
+    it('Accountant satisfies payments:view using payments:manage', () => {
+        expect(hasPermission(ROLE_PERMISSIONS_DEFAULTS.Accountant, 'payments:view')).toBe(true);
+    });
+
+    it('Student satisfies students:view directly', () => {
+        expect(hasPermission(ROLE_PERMISSIONS_DEFAULTS.Student, 'students:view')).toBe(true);
+    });
+
+    it('Student cannot satisfy students:manage', () => {
+        expect(hasPermission(ROLE_PERMISSIONS_DEFAULTS.Student, 'students:manage')).toBe(false);
+    });
+
+    it('requirePermission honours inheritance end-to-end', () => {
+        const teacher = mockReq({ user: { id: 1, permissions: ROLE_PERMISSIONS_DEFAULTS.Teacher } });
+        const res = mockRes();
+        const next = jest.fn();
+        requirePermission('attendance:view')(teacher, res, next);
+        expect(next).toHaveBeenCalled();
+        expect(res.statusCode).toBe(200);
+    });
+
+    it('requirePermission denies manage when only view is held', () => {
+        const viewOnly = mockReq({ user: { id: 1, permissions: ['attendance:view'] } });
+        const res = mockRes();
+        const next = jest.fn();
+        requirePermission('attendance:manage')(viewOnly, res, next);
+        expect(res.statusCode).toBe(403);
+        expect(next).not.toHaveBeenCalled();
     });
 });
 
