@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { authenticate, authorize, requirePermission } from '../middlewares/auth.middleware.js';
 import { auditLog } from '../middlewares/audit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { createStudentSchema, updateStudentSchema, updateStudentStatusSchema } from '../validators/student.validator.js';
@@ -36,7 +36,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/stats', authorize('Admin', 'SuperAdmin'), getStats);
+router.get('/stats', authorize('Admin', 'SuperAdmin'), requirePermission('students:view'), getStats);
 
 /**
  * @openapi
@@ -82,7 +82,7 @@ router.get('/stats', authorize('Admin', 'SuperAdmin'), getStats);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/', authorize('Admin', 'SuperAdmin', 'Registrar'), auditLog('CREATE_STUDENT'), validate(createStudentSchema), createStudent);
+router.post('/', authorize('Admin', 'SuperAdmin', 'Registrar'), requirePermission('students:manage'), auditLog('CREATE_STUDENT'), validate(createStudentSchema), createStudent);
 
 /**
  * @openapi
@@ -234,7 +234,7 @@ router.get('/:id', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), getSt
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.put('/:id', authorize('Admin', 'SuperAdmin', 'Registrar'), auditLog('UPDATE_STUDENT'), validate(updateStudentSchema), updateStudent);
+router.put('/:id', authorize('Admin', 'SuperAdmin', 'Registrar'), requirePermission('students:manage'), auditLog('UPDATE_STUDENT'), validate(updateStudentSchema), updateStudent);
 
 /**
  * @openapi
@@ -287,7 +287,7 @@ router.put('/:id', authorize('Admin', 'SuperAdmin', 'Registrar'), auditLog('UPDA
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.patch('/:id/status', authorize('Admin', 'SuperAdmin', 'Registrar'), auditLog('UPDATE_STUDENT_STATUS'), validate(updateStudentStatusSchema), updateStudentStatus);
+router.patch('/:id/status', authorize('Admin', 'SuperAdmin', 'Registrar'), requirePermission('students:manage'), auditLog('UPDATE_STUDENT_STATUS'), validate(updateStudentStatusSchema), updateStudentStatus);
 
 /**
  * @openapi
@@ -322,6 +322,6 @@ router.patch('/:id/status', authorize('Admin', 'SuperAdmin', 'Registrar'), audit
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/:id', authorize('Admin', 'SuperAdmin'), auditLog('DELETE_STUDENT'), deleteStudent);
+router.delete('/:id', authorize('Admin', 'SuperAdmin'), requirePermission('students:manage'), auditLog('DELETE_STUDENT'), deleteStudent);
 
 export default router;

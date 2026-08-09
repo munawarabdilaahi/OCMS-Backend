@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { authenticate, authorize, requirePermission } from '../middlewares/auth.middleware.js';
 import { getAdminDashboard, getTeacherDashboard, getStudentDashboard } from '../controllers/dashboard.controller.js';
 
 const router = Router();
@@ -33,7 +33,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/admin', authorize('Admin', 'SuperAdmin', 'Registrar', 'Accountant'), getAdminDashboard);
+router.get('/admin', authorize('Admin', 'SuperAdmin', 'Registrar', 'Accountant'), requirePermission('dashboard:view'), getAdminDashboard);
 
 /**
  * @openapi
@@ -62,7 +62,7 @@ router.get('/admin', authorize('Admin', 'SuperAdmin', 'Registrar', 'Accountant')
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/teacher', authorize('Teacher'), getTeacherDashboard);
+router.get('/teacher', authorize('Teacher'), requirePermission('dashboard:view'), getTeacherDashboard);
 
 /**
  * @openapi
@@ -91,6 +91,6 @@ router.get('/teacher', authorize('Teacher'), getTeacherDashboard);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/student', authorize('Student'), getStudentDashboard);
+router.get('/student', authorize('Student'), requirePermission('dashboard:view'), getStudentDashboard);
 
 export default router;

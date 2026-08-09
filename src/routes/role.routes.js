@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { authenticate, authorize, requirePermission } from '../middlewares/auth.middleware.js';
 import { auditLog } from '../middlewares/audit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { createRoleSchema, updateRoleSchema } from '../validators/role.validator.js';
@@ -38,7 +38,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/', authorize('Admin', 'SuperAdmin'), listRoles);
+router.get('/', authorize('Admin', 'SuperAdmin'), requirePermission('settings:manage'), listRoles);
 
 /**
  * @openapi
@@ -77,7 +77,7 @@ router.get('/', authorize('Admin', 'SuperAdmin'), listRoles);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/:id', authorize('Admin', 'SuperAdmin'), getRoleById);
+router.get('/:id', authorize('Admin', 'SuperAdmin'), requirePermission('settings:manage'), getRoleById);
 
 /**
  * @openapi
@@ -127,7 +127,7 @@ router.get('/:id', authorize('Admin', 'SuperAdmin'), getRoleById);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/', authorize('Admin', 'SuperAdmin'), auditLog('CREATE_ROLE'), validate(createRoleSchema), createRole);
+router.post('/', authorize('Admin', 'SuperAdmin'), requirePermission('settings:manage'), auditLog('CREATE_ROLE'), validate(createRoleSchema), createRole);
 
 /**
  * @openapi
@@ -184,7 +184,7 @@ router.post('/', authorize('Admin', 'SuperAdmin'), auditLog('CREATE_ROLE'), vali
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.put('/:id', authorize('Admin', 'SuperAdmin'), auditLog('UPDATE_ROLE'), validate(updateRoleSchema), updateRole);
+router.put('/:id', authorize('Admin', 'SuperAdmin'), requirePermission('settings:manage'), auditLog('UPDATE_ROLE'), validate(updateRoleSchema), updateRole);
 
 /**
  * @openapi
@@ -219,6 +219,6 @@ router.put('/:id', authorize('Admin', 'SuperAdmin'), auditLog('UPDATE_ROLE'), va
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.delete('/:id', authorize('Admin', 'SuperAdmin'), auditLog('DELETE_ROLE'), deleteRole);
+router.delete('/:id', authorize('Admin', 'SuperAdmin'), requirePermission('settings:manage'), auditLog('DELETE_ROLE'), deleteRole);
 
 export default router;
