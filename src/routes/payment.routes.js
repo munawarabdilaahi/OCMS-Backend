@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { authenticate, authorize, requirePermission } from '../middlewares/auth.middleware.js';
 import { auditLog } from '../middlewares/audit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { createPaymentSchema } from '../validators/payment.validator.js';
@@ -35,7 +35,7 @@ router.use(authenticate);
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/stats', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), getPaymentStats);
+router.get('/stats', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), requirePermission('payments:view'), getPaymentStats);
 
 /**
  * @openapi
@@ -87,7 +87,7 @@ router.get('/stats', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), 
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), listPayments);
+router.get('/', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), requirePermission('payments:view'), listPayments);
 
 /**
  * @openapi
@@ -126,7 +126,7 @@ router.get('/', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), listP
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/:id', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), getPaymentById);
+router.get('/:id', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), requirePermission('payments:view'), getPaymentById);
 
 /**
  * @openapi
@@ -170,6 +170,6 @@ router.get('/:id', authorize('Admin', 'SuperAdmin', 'Accountant', 'Student'), ge
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/', authorize('Admin', 'SuperAdmin', 'Accountant'), auditLog('CREATE_PAYMENT'), validate(createPaymentSchema), createPayment);
+router.post('/', authorize('Admin', 'SuperAdmin', 'Accountant'), requirePermission('payments:manage'), auditLog('CREATE_PAYMENT'), validate(createPaymentSchema), createPayment);
 
 export default router;

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { authenticate, authorize, requirePermission } from '../middlewares/auth.middleware.js';
 import { auditLog } from '../middlewares/audit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import {
@@ -352,7 +352,7 @@ router.get('/course-exams/:id', authorize('Admin', 'SuperAdmin', 'Teacher', 'Stu
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.post('/results', authorize('Admin', 'SuperAdmin', 'Teacher'), auditLog('SUBMIT_EXAM_RESULT'), validate(submitExamResultSchema), submitExamResult);
+router.post('/results', authorize('Admin', 'SuperAdmin', 'Teacher'), requirePermission('results:manage'), auditLog('SUBMIT_EXAM_RESULT'), validate(submitExamResultSchema), submitExamResult);
 
 /**
  * @openapi
@@ -412,6 +412,6 @@ router.post('/results', authorize('Admin', 'SuperAdmin', 'Teacher'), auditLog('S
  *       500:
  *         $ref: '#/components/responses/InternalError'
  */
-router.get('/results', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), getExamResults);
+router.get('/results', authorize('Admin', 'SuperAdmin', 'Teacher', 'Student'), requirePermission('results:view'), getExamResults);
 
 export default router;
