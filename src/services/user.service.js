@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { hashPassword } from '../utils/password.js';
 import { getPaginationParams } from '../utils/pagination.js';
+import { resolveAccountPassword } from './account.service.js';
 
 const userDelegate = () => prisma.user;
 const roleDelegate = () => prisma.role;
@@ -65,7 +66,8 @@ export async function createUser(data) {
         throw error;
     }
 
-    const hashedPassword = await hashPassword(password);
+    const { password: plainPassword } = await resolveAccountPassword(email, password, 'Administrator');
+    const hashedPassword = await hashPassword(plainPassword);
     return userDelegate().create({
         data: { name, email, password: hashedPassword, phone, role_id: Number(resolvedRoleId), status },
         include: { role: true },

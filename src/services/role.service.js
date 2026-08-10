@@ -1,6 +1,17 @@
 import prisma from '../config/db.js';
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js';
 import { normalizePermissions } from '../middlewares/auth.middleware.js';
+import { CANONICAL_ROLES } from '../constants/permissions.js';
+
+const BUILT_IN_ROLES = new Set(CANONICAL_ROLES);
+
+function assertNotBuiltIn(name, action) {
+    if (BUILT_IN_ROLES.has(name)) {
+        const error = new Error(`Cannot ${action} the built-in role "${name}".`);
+        error.statusCode = 400;
+        throw error;
+    }
+}
 
 export async function listRoles(query) {
     const { page, limit, skip } = getPaginationParams(query);
@@ -40,6 +51,9 @@ export async function updateRole(id, data) {
         throw error;
     }
     const { name, permissions } = data;
+    if (name !== undefined && name !== existing.name) {
+        assertNotBuiltIn(existing.name, 'rename');
+    }
     return prisma.role.update({
         where: { id: roleId },
         data: {
@@ -57,6 +71,7 @@ export async function deleteRole(id) {
         error.statusCode = 404;
         throw error;
     }
+    assertNotBuiltIn(existing.name, 'delete');
     const userCount = await prisma.user.count({ where: { role_id: roleId } });
     if (userCount > 0) {
         const error = new Error(`Cannot delete role with ${userCount} user(s). Reassign users first.`);

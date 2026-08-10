@@ -1,6 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema, refreshTokenSchema, verifyEmailSchema } from '../src/validators/auth.validator.js';
 import { createStudentSchema, updateStudentSchema, updateStudentStatusSchema } from '../src/validators/student.validator.js';
+import { createUserSchema, updateUserSchema } from '../src/validators/user.validator.js';
 import { createDepartmentSchema, updateDepartmentSchema } from '../src/validators/department.validator.js';
 import { createCourseSchema, updateCourseSchema } from '../src/validators/course.validator.js';
 import { createTeacherSchema, updateTeacherSchema } from '../src/validators/teacher.validator.js';
@@ -23,13 +24,13 @@ describe('loginSchema', () => {
 
 describe('registerSchema', () => {
     it('accepts valid registration', () => {
-        expect(registerSchema.safeParse({ name: 'New', email: 'new@ocms.edu', password: 'StrongPass1!', role: 'Student' }).success).toBe(true);
+        expect(registerSchema.safeParse({ name: 'New', email: 'new@ocms.edu', password: 'StrongPass1!!', role: 'Student' }).success).toBe(true);
     });
     it('rejects weak password', () => {
         expect(registerSchema.safeParse({ name: 'New', email: 'new@ocms.edu', password: 'weak!', role: 'Student' }).success).toBe(false);
     });
     it('rejects missing name', () => {
-        expect(registerSchema.safeParse({ email: 'new@ocms.edu', password: 'StrongPass1!' }).success).toBe(false);
+        expect(registerSchema.safeParse({ email: 'new@ocms.edu', password: 'StrongPass1!!' }).success).toBe(false);
     });
 });
 
@@ -70,19 +71,19 @@ describe('verifyEmailSchema', () => {
 
 describe('createStudentSchema', () => {
     it('accepts valid student data with snake_case', () => {
-        const result = createStudentSchema.safeParse({ name: 'Jane Doe', email: 'jane@ocms.edu', password: 'StudentPass1', department_id: 1, admission_no: 'STU-001', gender: 'FEMALE' });
+        const result = createStudentSchema.safeParse({ name: 'Jane Doe', email: 'jane@ocms.edu', password: 'StudentPass1!', department_id: 1, admission_no: 'STU-001', gender: 'FEMALE' });
         expect(result.success).toBe(true);
     });
     it('accepts camelCase fields', () => {
-        const result = createStudentSchema.safeParse({ name: 'Jane Doe', email: 'jane@ocms.edu', password: 'StudentPass1', departmentId: 1, admissionNo: 'STU-001' });
+        const result = createStudentSchema.safeParse({ name: 'Jane Doe', email: 'jane@ocms.edu', password: 'StudentPass1!', departmentId: 1, admissionNo: 'STU-001' });
         expect(result.success).toBe(true);
     });
     it('rejects invalid gender', () => {
-        const result = createStudentSchema.safeParse({ name: 'Jane', email: 'jane@ocms.edu', password: 'StudentPass1', gender: 'INVALID' });
+        const result = createStudentSchema.safeParse({ name: 'Jane', email: 'jane@ocms.edu', password: 'StudentPass1!', gender: 'INVALID' });
         expect(result.success).toBe(false);
     });
     it('rejects missing department_id', () => {
-        const result = createStudentSchema.safeParse({ name: 'Jane', email: 'jane@ocms.edu', password: 'StudentPass1' });
+        const result = createStudentSchema.safeParse({ name: 'Jane', email: 'jane@ocms.edu', password: 'StudentPass1!' });
         expect(result.success).toBe(false);
     });
 });
@@ -131,14 +132,14 @@ describe('createCourseSchema', () => {
 
 describe('createTeacherSchema', () => {
     it('accepts valid teacher', () => {
-        const result = createTeacherSchema.safeParse({ name: 'Prof A', email: 'prof@ocms.edu', password: 'StrongPass1' });
+        const result = createTeacherSchema.safeParse({ name: 'Prof A', email: 'prof@ocms.edu', password: 'StrongPass1!' });
         expect(result.success).toBe(true);
     });
     it('rejects missing name', () => {
-        expect(createTeacherSchema.safeParse({ email: 'prof@ocms.edu', password: 'StrongPass1' }).success).toBe(false);
+        expect(createTeacherSchema.safeParse({ email: 'prof@ocms.edu', password: 'StrongPass1!' }).success).toBe(false);
     });
     it('rejects invalid gender', () => {
-        const result = createTeacherSchema.safeParse({ name: 'Prof A', email: 'prof@ocms.edu', password: 'StrongPass1', gender: 'BAD' });
+        const result = createTeacherSchema.safeParse({ name: 'Prof A', email: 'prof@ocms.edu', password: 'StrongPass1!', gender: 'BAD' });
         expect(result.success).toBe(false);
     });
 });
@@ -146,6 +147,53 @@ describe('createTeacherSchema', () => {
 describe('updateTeacherSchema', () => {
     it('accepts partial update', () => {
         expect(updateTeacherSchema.safeParse({ name: 'Updated Prof' }).success).toBe(true);
+    });
+});
+
+describe('admin-created account passwords follow the strong policy (SEC-12)', () => {
+    it('createUserSchema rejects a short password', () => {
+        const result = createUserSchema.safeParse({ name: 'New User', email: 'user@ocms.edu', password: 'weak!', role_id: 2 });
+        expect(result.success).toBe(false);
+    });
+
+    it('createUserSchema rejects a password with no special character', () => {
+        const result = createUserSchema.safeParse({ name: 'New User', email: 'user@ocms.edu', password: 'StudentPass1', role_id: 2 });
+        expect(result.success).toBe(false);
+    });
+
+    it('createUserSchema accepts a strong password', () => {
+        const result = createUserSchema.safeParse({ name: 'New User', email: 'user@ocms.edu', password: 'StrongPass1!', role_id: 2 });
+        expect(result.success).toBe(true);
+    });
+
+    it('createUserSchema accepts an omitted password (server generates one)', () => {
+        const result = createUserSchema.safeParse({ name: 'New User', email: 'user@ocms.edu', role_id: 2 });
+        expect(result.success).toBe(true);
+    });
+
+    it('updateUserSchema accepts a strong password and rejects a weak one', () => {
+        expect(updateUserSchema.safeParse({ password: 'StrongPass1!' }).success).toBe(true);
+        expect(updateUserSchema.safeParse({ password: 'weak' }).success).toBe(false);
+    });
+
+    it('createStudentSchema rejects a weak password', () => {
+        const result = createStudentSchema.safeParse({ name: 'Jane', email: 'jane@ocms.edu', password: 'weak!', department_id: 1 });
+        expect(result.success).toBe(false);
+    });
+
+    it('createStudentSchema accepts an omitted password', () => {
+        const result = createStudentSchema.safeParse({ name: 'Jane', email: 'jane@ocms.edu', department_id: 1 });
+        expect(result.success).toBe(true);
+    });
+
+    it('createTeacherSchema rejects a weak password', () => {
+        const result = createTeacherSchema.safeParse({ name: 'Prof A', email: 'prof@ocms.edu', password: 'weak!' });
+        expect(result.success).toBe(false);
+    });
+
+    it('createTeacherSchema accepts an omitted password', () => {
+        const result = createTeacherSchema.safeParse({ name: 'Prof A', email: 'prof@ocms.edu' });
+        expect(result.success).toBe(true);
     });
 });
 

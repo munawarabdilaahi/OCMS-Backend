@@ -7,7 +7,7 @@ import { isInactive } from '../utils/validation.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import { sendMail, buildAuthLink } from '../utils/mailer.js';
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
+export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 const JWT_REFRESH_EXPIRES_IN = '7d';
 const JWT_ALGORITHM = 'HS256';
 const JWT_ISSUER = 'ocms-api';

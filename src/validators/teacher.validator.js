@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { emailSchema } from '../middlewares/validate.middleware.js';
+import { emailSchema, passwordSchema } from '../middlewares/validate.middleware.js';
 
 export const ALLOWED_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
 
 const baseTeacherSchema = z.object({
     name: z.string().min(1, 'Name, email, and password are required.'),
     email: emailSchema('Invalid email format.'),
-    password: z.string().min(1, 'Name, email, and password are required.'),
+    password: passwordSchema().optional(),
     department_id: z.union([z.string(), z.number()]).optional(),
     departmentId: z.union([z.string(), z.number()]).optional(),
     gender: z.string().optional().transform(val => val ? val.toUpperCase() : val),
@@ -26,7 +26,7 @@ export const createTeacherSchema = baseTeacherSchema.refine(data => {
 export const updateTeacherSchema = z.object({
     name: z.string().min(1, 'Name, email, and password are required.').optional(),
     email: emailSchema('Invalid email format.').optional(),
-    password: z.string().min(1, 'Name, email, and password are required.').optional(),
+    password: passwordSchema().optional(),
     department_id: z.union([z.string(), z.number()]).optional(),
     departmentId: z.union([z.string(), z.number()]).optional(),
     gender: z.string().optional().transform(val => val ? val.toUpperCase() : val),

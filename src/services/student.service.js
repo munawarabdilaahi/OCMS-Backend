@@ -2,6 +2,7 @@ import prisma from '../config/db.js';
 import { hashPassword } from '../utils/password.js';
 import { getPaginationParams } from '../utils/pagination.js';
 import { getTeacherCourseIds } from '../utils/rbac.js';
+import { resolveAccountPassword } from './account.service.js';
 
 async function getStudentRoleId() {
     const role = await prisma.role.findFirst({ where: { name: 'Student' } });
@@ -36,7 +37,8 @@ export async function createStudent(data) {
     }
 
     const roleId = await getStudentRoleId();
-    const hashedPassword = await hashPassword(password);
+    const { password: plainPassword } = await resolveAccountPassword(email, password, 'Student');
+    const hashedPassword = await hashPassword(plainPassword);
 
     const student = await prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
