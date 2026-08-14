@@ -3,6 +3,20 @@ import { getPaginationParams } from '../utils/pagination.js';
 import { getTeacherCourseIds } from '../utils/rbac.js';
 import { isStudentEnrolled } from './enrollment.service.js';
 
+async function getStudentCourseIds(user) {
+    if (!user || user.roleName !== 'Student') return null;
+    const student = await prisma.student.findUnique({
+        where: { user_id: user.id },
+        select: { id: true },
+    });
+    if (!student) return [];
+    const enrollments = await prisma.enrollment.findMany({
+        where: { student_id: student.id },
+        select: { course_id: true },
+    });
+    return enrollments.map((enrollment) => enrollment.course_id);
+}
+
 export async function createExamSchedule(data, user) {
     const { course_id, courseId, title, exam_type, examType, exam_date, examDate, start_time, startTime, end_time, endTime, room, status } = data;
     const resolvedCourseId = Number(course_id || courseId);
@@ -99,6 +113,10 @@ export async function getCourseExamById(id, user) {
     if (!exam) return null;
     if (user && user.roleName === 'Teacher') {
         const courseIds = await getTeacherCourseIds(user);
+        if (courseIds !== null && !courseIds.includes(exam.course_id)) return null;
+    }
+    if (user && user.roleName === 'Student') {
+        const courseIds = await getStudentCourseIds(user);
         if (courseIds !== null && !courseIds.includes(exam.course_id)) return null;
     }
     return exam;
@@ -267,21 +285,36 @@ export async function getCourseExams(query, user) {
 
     const queryCourseId = query.course_id ? Number(query.course_id) : undefined;
 
-    const courseIds = await getTeacherCourseIds(user);
-    if (courseIds !== null) {
-        if (courseIds.length === 0) {
+    if (user.roleName === 'Student') {
+        const studentCourseIds = await getStudentCourseIds(user);
+        if (studentCourseIds === null || studentCourseIds.length === 0) {
             return { courseExams: [], total: 0, page, limit };
         }
         if (queryCourseId) {
-            if (!courseIds.includes(queryCourseId)) {
+            if (!studentCourseIds.includes(queryCourseId)) {
                 return { courseExams: [], total: 0, page, limit };
             }
             where.course_id = queryCourseId;
         } else {
-            where.course_id = { in: courseIds };
+            where.course_id = { in: studentCourseIds };
         }
-    } else if (queryCourseId) {
-        where.course_id = queryCourseId;
+    } else {
+        const courseIds = await getTeacherCourseIds(user);
+        if (courseIds !== null) {
+            if (courseIds.length === 0) {
+                return { courseExams: [], total: 0, page, limit };
+            }
+            if (queryCourseId) {
+                if (!courseIds.includes(queryCourseId)) {
+                    return { courseExams: [], total: 0, page, limit };
+                }
+                where.course_id = queryCourseId;
+            } else {
+                where.course_id = { in: courseIds };
+            }
+        } else if (queryCourseId) {
+            where.course_id = queryCourseId;
+        }
     }
 
     const [courseExams, total] = await Promise.all([

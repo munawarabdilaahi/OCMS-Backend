@@ -16,6 +16,14 @@ function serializeUser(user) {
     };
 }
 
+function assertCanAssignRole(user, role) {
+    if (role?.name === 'SuperAdmin' && user?.roleName !== 'SuperAdmin') {
+        const error = new Error('Access denied. Only SuperAdmin can assign the SuperAdmin role.');
+        error.statusCode = 403;
+        throw error;
+    }
+}
+
 export async function getUsers(query) {
     const { page, limit, skip } = getPaginationParams(query);
     const search = query.search?.trim();
@@ -47,7 +55,7 @@ export async function getUserById(id) {
     return userDelegate().findUnique({ where: { id: Number(id) }, include: { role: true } });
 }
 
-export async function createUser(data) {
+export async function createUser(data, user) {
     const { name, email, password, phone, role_id, roleId, status = 'ACTIVE' } = data;
 
     const existing = await userDelegate().findUnique({ where: { email } });
@@ -65,6 +73,7 @@ export async function createUser(data) {
         error.statusCode = 400;
         throw error;
     }
+    assertCanAssignRole(user, role);
 
     const { password: plainPassword } = await resolveAccountPassword(email, password, 'Administrator');
     const hashedPassword = await hashPassword(plainPassword);
@@ -74,7 +83,7 @@ export async function createUser(data) {
     });
 }
 
-export async function updateUser(id, data) {
+export async function updateUser(id, data, user) {
     const userId = Number(id);
     const existing = await userDelegate().findUnique({ where: { id: userId } });
     if (!existing) {
@@ -99,7 +108,17 @@ export async function updateUser(id, data) {
     if (email !== undefined) updateData.email = email;
     if (phone !== undefined) updateData.phone = phone;
     if (status !== undefined) updateData.status = status;
-    if (role_id !== undefined || roleId !== undefined) updateData.role_id = Number(role_id || roleId);
+    if (role_id !== undefined || roleId !== undefined) {
+        const resolvedRoleId = Number(role_id || roleId);
+        const role = await roleDelegate().findUnique({ where: { id: resolvedRoleId } });
+        if (!role) {
+            const error = new Error('Invalid role.');
+            error.statusCode = 400;
+            throw error;
+        }
+        assertCanAssignRole(user, role);
+        updateData.role_id = resolvedRoleId;
+    }
     if (password) updateData.password = await hashPassword(password);
 
     return userDelegate().update({ where: { id: userId }, data: updateData, include: { role: true } });

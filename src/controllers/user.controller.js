@@ -31,7 +31,7 @@ export async function getUserById(req, res, next) {
 export async function createUser(req, res, next) {
     try {
         requireAdmin(req.user);
-        const user = await createUserService(req.body);
+        const user = await createUserService(req.body, req.user);
         return res.status(201).json({ success: true, message: 'User created successfully.', data: serializeUser(user) });
     } catch (error) {
         next(error);
@@ -41,7 +41,7 @@ export async function createUser(req, res, next) {
 export async function updateUser(req, res, next) {
     try {
         requireAdmin(req.user);
-        const user = await updateUserService(req.params.id, req.body);
+        const user = await updateUserService(req.params.id, req.body, req.user);
         return res.status(200).json({ success: true, message: 'User updated successfully.', data: serializeUser(user) });
     } catch (error) {
         next(error);

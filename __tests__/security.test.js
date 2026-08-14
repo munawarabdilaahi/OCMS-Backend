@@ -4,6 +4,8 @@ import { listRoles, getRoleById, createRole, updateRole, deleteRole } from '../s
 import { createStudent } from '../src/services/student.service.js';
 import { generateRandomPassword } from '../src/utils/password.js';
 import { passwordSchema } from '../src/middlewares/validate.middleware.js';
+import { getCourseExamById, getCourseExams } from '../src/services/exam.service.js';
+import { createUser, updateUser } from '../src/services/user.service.js';
 
 describe('access token lifetime matches the cookie (SEC-3)', () => {
     it('defaults to 15m when JWT_EXPIRES_IN is unset', async () => {
@@ -182,5 +184,162 @@ describe('server-generated credentials for admin-created accounts (SEC-2)', () =
         const storedData = userCreate.mock.calls[0][0].data;
         expect(storedData.password).toMatch(/^\$2[aby]\$/);
         expect(storedData.password).not.toBe('Adm1nPass!');
+    });
+});
+
+describe('student exam-content access is scoped to enrollment (SEC-6)', () => {
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    const studentUser = { id: 3, roleName: 'Student' };
+    const enrolledCourseIds = [{ course_id: 5 }, { course_id: 6 }];
+    const emptyResult = { courseExams: [], total: 0, page: 1, limit: 20 };
+
+    it('returns null for a course exam the student is not enrolled in', async () => {
+        jest.spyOn(prisma.courseExam, 'findUnique').mockResolvedValue({ id: 11, course_id: 5, course: { id: 5 } });
+        jest.spyOn(prisma.student, 'findUnique').mockResolvedValue({ id: 10 });
+        jest.spyOn(prisma.enrollment, 'findMany').mockResolvedValue([{ course_id: 6 }]);
+
+        await expect(getCourseExamById(11, studentUser)).resolves.toBeNull();
+    });
+
+    it('returns the exam for a course the student is enrolled in', async () => {
+        const exam = { id: 11, course_id: 5, course: { id: 5 } };
+        jest.spyOn(prisma.courseExam, 'findUnique').mockResolvedValue(exam);
+        jest.spyOn(prisma.student, 'findUnique').mockResolvedValue({ id: 10 });
+        jest.spyOn(prisma.enrollment, 'findMany').mockResolvedValue(enrolledCourseIds);
+
+        await expect(getCourseExamById(11, studentUser)).resolves.toEqual(exam);
+    });
+
+    it('scopes the list result to enrolled course ids', async () => {
+        jest.spyOn(prisma.student, 'findUnique').mockResolvedValue({ id: 10 });
+        jest.spyOn(prisma.enrollment, 'findMany').mockResolvedValue(enrolledCourseIds);
+        const findMany = jest.spyOn(prisma.courseExam, 'findMany').mockResolvedValue([{ id: 11, course_id: 5 }]);
+        jest.spyOn(prisma.courseExam, 'count').mockResolvedValue(1);
+
+        const result = await getCourseExams({}, studentUser);
+
+        expect(result.total).toBe(1);
+        expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { course_id: { in: [5, 6] } } }));
+    });
+
+    it('returns an empty list when the student has no enrollments', async () => {
+        jest.spyOn(prisma.student, 'findUnique').mockResolvedValue({ id: 10 });
+        jest.spyOn(prisma.enrollment, 'findMany').mockResolvedValue([]);
+        const findMany = jest.spyOn(prisma.courseExam, 'findMany');
+
+        await expect(getCourseExams({}, studentUser)).resolves.toEqual(emptyResult);
+        expect(findMany).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty list for a course_id the student is not enrolled in', async () => {
+        jest.spyOn(prisma.student, 'findUnique').mockResolvedValue({ id: 10 });
+        jest.spyOn(prisma.enrollment, 'findMany').mockResolvedValue([{ course_id: 6 }]);
+        const findMany = jest.spyOn(prisma.courseExam, 'findMany');
+
+        await expect(getCourseExams({ course_id: '5' }, studentUser)).resolves.toEqual(emptyResult);
+        expect(findMany).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty list when the student profile does not exist', async () => {
+        jest.spyOn(prisma.student, 'findUnique').mockResolvedValue(null);
+        const findMany = jest.spyOn(prisma.courseExam, 'findMany');
+
+        await expect(getCourseExams({}, studentUser)).resolves.toEqual(emptyResult);
+        expect(findMany).not.toHaveBeenCalled();
+    });
+
+    it('still lets Admin list all course exams (regression)', async () => {
+        const admin = { id: 1, roleName: 'Admin' };
+        const findMany = jest.spyOn(prisma.courseExam, 'findMany').mockResolvedValue([{ id: 11, course_id: 5 }]);
+        jest.spyOn(prisma.courseExam, 'count').mockResolvedValue(1);
+
+        await getCourseExams({}, admin);
+
+        expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+    });
+});
+
+describe('only SuperAdmin can assign the SuperAdmin role (SEC-8)', () => {
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    const adminUser = { id: 1, roleName: 'Admin' };
+    const superAdminUser = { id: 2, roleName: 'SuperAdmin' };
+    const superRole = { id: 2, name: 'SuperAdmin', permissions: ['*'] };
+    const studentRole = { id: 5, name: 'Student', permissions: [] };
+
+    it('blocks an Admin from creating a SuperAdmin user', async () => {
+        jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
+        jest.spyOn(prisma.role, 'findUnique').mockResolvedValue(superRole);
+        const createSpy = jest.spyOn(prisma.user, 'create');
+
+        await expect(
+            createUser({ name: 'Root', email: 'root@ocms.edu', password: 'Passw0rd!', role_id: 2 }, adminUser),
+        ).rejects.toMatchObject({ statusCode: 403, message: expect.stringContaining('Only SuperAdmin') });
+        expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it('allows a SuperAdmin to create a SuperAdmin user', async () => {
+        jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
+        jest.spyOn(prisma.role, 'findUnique').mockResolvedValue(superRole);
+        const created = { id: 42, name: 'Root', email: 'root@ocms.edu', role: { name: 'SuperAdmin' }, role_id: 2 };
+        jest.spyOn(prisma.user, 'create').mockResolvedValue(created);
+
+        await expect(
+            createUser({ name: 'Root', email: 'root@ocms.edu', password: 'Passw0rd!', role_id: 2 }, superAdminUser),
+        ).resolves.toEqual(created);
+    });
+
+    it('allows an Admin to create users with non-SuperAdmin roles', async () => {
+        jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
+        jest.spyOn(prisma.role, 'findUnique').mockResolvedValue(studentRole);
+        const created = { id: 43, name: 'S', email: 's@ocms.edu', role: { name: 'Student' }, role_id: 5 };
+        jest.spyOn(prisma.user, 'create').mockResolvedValue(created);
+
+        await expect(
+            createUser({ name: 'S', email: 's@ocms.edu', password: 'Passw0rd!', role_id: 5 }, adminUser),
+        ).resolves.toEqual(created);
+    });
+
+    it('blocks an Admin from promoting a user to SuperAdmin', async () => {
+        jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({ id: 7, email: 't@ocms.edu' });
+        jest.spyOn(prisma.role, 'findUnique').mockResolvedValue(superRole);
+        const updateSpy = jest.spyOn(prisma.user, 'update');
+
+        await expect(updateUser(7, { role_id: 2 }, adminUser)).rejects.toMatchObject({
+            statusCode: 403,
+            message: expect.stringContaining('Only SuperAdmin'),
+        });
+        expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it('allows a SuperAdmin to promote a user to SuperAdmin', async () => {
+        jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({ id: 7, email: 't@ocms.edu' });
+        jest.spyOn(prisma.role, 'findUnique').mockResolvedValue(superRole);
+        const updated = { id: 7, role: { name: 'SuperAdmin' }, role_id: 2 };
+        jest.spyOn(prisma.user, 'update').mockResolvedValue(updated);
+
+        await expect(updateUser(7, { role_id: 2 }, superAdminUser)).resolves.toEqual(updated);
+    });
+
+    it('rejects a role_id that points to a nonexistent role on update', async () => {
+        jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({ id: 7, email: 't@ocms.edu' });
+        jest.spyOn(prisma.role, 'findUnique').mockResolvedValue(null);
+        const updateSpy = jest.spyOn(prisma.user, 'update');
+
+        await expect(updateUser(7, { role_id: 999 }, superAdminUser)).rejects.toMatchObject({ statusCode: 400 });
+        expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it('allows an Admin to update a user without reassigning SuperAdmin', async () => {
+        jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({ id: 7, email: 't@ocms.edu' });
+        const updated = { id: 7, name: 'New', role: { name: 'Student' }, role_id: 5 };
+        jest.spyOn(prisma.user, 'update').mockResolvedValue(updated);
+
+        await expect(updateUser(7, { name: 'New' }, adminUser)).resolves.toEqual(updated);
     });
 });
